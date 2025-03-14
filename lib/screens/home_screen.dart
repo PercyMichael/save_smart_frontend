@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:savesmart_app/screens/saving_goals_screen.dart';
 import 'transaction_screen.dart';
+// ignore: unused_import
 import 'save_screen.dart';
 import 'withdraw_screen.dart';
 import 'analytics_screen.dart';
 import 'profile_screen.dart';
 import 'notification_center.dart';
-import 'settings_screen.dart'; // Import the settings screen
+import 'settings_screen.dart';
 
 class HomeScreen extends StatelessWidget {
   final currencyFormat = NumberFormat.currency(
@@ -72,33 +74,35 @@ class HomeScreen extends StatelessWidget {
                           'Hello,',
                           style: TextStyle(
                             // ignore: deprecated_member_use
-                            color: Colors.white.withOpacity(0.8),
-                            fontSize: 16,
+                            color: Colors.white.withOpacity(0.9), // Increased opacity for better contrast
+                            fontSize: 18, // Increased from 16
                           ),
                         ),
-                        const Text(
+                        Text(
                           'Mukasa John',
-                          style: TextStyle(
+                          style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 24,
+                            fontSize: 26, // Increased from 24
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 24), // Increased spacing
                         const Text(
                           'Wallet Balance',
                           style: TextStyle(
-                            color: Colors.white70,
-                            fontSize: 16,
+                            color: Colors.white, // Increased opacity from white70
+                            fontSize: 18, // Increased from 16
+                            fontWeight: FontWeight.w500, // Added medium weight
                           ),
                         ),
-                        const SizedBox(height: 8),
+                        const SizedBox(height: 10), // Increased spacing
                         Text(
                           currencyFormat.format(58095 * 3700),
                           style: const TextStyle(
                             color: Colors.white,
-                            fontSize: 32,
+                            fontSize: 36, // Increased from 32
                             fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5, // Added letter spacing for better readability
                           ),
                         ),
                       ],
@@ -133,9 +137,12 @@ class HomeScreen extends StatelessWidget {
                           customGreen,
                           Colors.white, 
                           () {
+                            // Modified navigation - Go to SavingsGoalsScreen first with selection mode
                             Navigator.push(
                               context,
-                              MaterialPageRoute(builder: (context) => const SaveScreen()),
+                              MaterialPageRoute(
+                                builder: (context) => SavingsGoalScreen(),
+                              ),
                             );
                           }
                         ),
@@ -153,10 +160,20 @@ class HomeScreen extends StatelessWidget {
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        selectedItemColor: customGreen,
-        unselectedItemColor: Colors.grey,
+        selectedItemColor: customGreen, // Keeping the selected color as customGreen
+        unselectedItemColor: Colors.grey.shade600, // Darker grey for better contrast
         currentIndex: 0,
         type: BottomNavigationBarType.fixed,
+        elevation: 15, // Increased elevation for better visual prominence
+        backgroundColor: Colors.white,
+        selectedLabelStyle: const TextStyle(
+          fontWeight: FontWeight.w600, // Bolder text for selected item
+          fontSize: 13, // Slightly larger font
+        ),
+        unselectedLabelStyle: const TextStyle(
+          fontSize: 12, // Slightly larger than default
+        ),
+        iconSize: 26, // Larger icons for better visibility
         onTap: (index) {
           if (index == 1) {
             Navigator.push(
@@ -177,10 +194,22 @@ class HomeScreen extends StatelessWidget {
           }
         },
         items: const [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-          BottomNavigationBarItem(icon: Icon(Icons.analytics), label: 'Analytic'),
-          BottomNavigationBarItem(icon: Icon(Icons.compare_arrows), label: 'Transaction'),
-          BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Settings'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.analytics),
+            label: 'Analytic',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.compare_arrows),
+            label: 'Transaction',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Settings',
+          ),
         ],
       ),
     );
@@ -221,8 +250,9 @@ class HomeScreen extends StatelessWidget {
               label,
               style: TextStyle(
                 color: iconColor,
-                fontSize: 16,
+                fontSize: 17, // Increased from 16
                 fontWeight: FontWeight.w600,
+                letterSpacing: 0.5, // Added letter spacing
               ),
             ),
           ],
@@ -265,12 +295,13 @@ class HomeScreen extends StatelessWidget {
               child: Icon(Icons.analytics, color: customGreen),
             ),
             const SizedBox(width: 15),
-            const Expanded(
+            Expanded(
               child: Text(
                 "Let's take a look at your financial overview for October!",
                 style: TextStyle(
-                  fontSize: 14,
+                  fontSize: 15, // Increased from 14
                   fontWeight: FontWeight.w500,
+                  color: Colors.black87, // Darker text color
                 ),
               ),
             ),
@@ -291,15 +322,20 @@ class HomeScreen extends StatelessWidget {
             const Text(
               'Transaction history',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 18, // Increased from 16
                 fontWeight: FontWeight.bold,
+                color: Colors.black87, // Ensure good contrast
               ),
             ),
             TextButton(
               onPressed: () {},
               child: Text(
                 'See All',
-                style: TextStyle(color: customGreen),
+                style: TextStyle(
+                  color: customGreen,
+                  fontSize: 15, // Increased size
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
           ],
@@ -325,7 +361,11 @@ class HomeScreen extends StatelessWidget {
             backgroundColor: Colors.grey[200],
             child: Text(
               name[0],
-              style: TextStyle(color: customGreen),
+              style: TextStyle(
+                color: customGreen,
+                fontSize: 16, // Added size for better visibility
+                fontWeight: FontWeight.bold,
+              ),
             ),
           ),
           const SizedBox(width: 12),
@@ -337,13 +377,15 @@ class HomeScreen extends StatelessWidget {
                   name,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
+                    fontSize: 15, // Increased size
+                    color: Colors.black87, // Darker text color
                   ),
                 ),
                 Text(
                   type,
                   style: TextStyle(
-                    color: Colors.grey[600],
-                    fontSize: 12,
+                    color: Colors.grey[700], // Darker than original grey[600]
+                    fontSize: 13, // Increased from 12
                   ),
                 ),
               ],
@@ -354,6 +396,7 @@ class HomeScreen extends StatelessWidget {
             style: TextStyle(
               color: isCredit ? customGreen : Colors.redAccent,
               fontWeight: FontWeight.bold,
+              fontSize: 15, // Added size for better visibility
             ),
           ),
         ],

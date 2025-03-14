@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
+// ignore: unnecessary_import
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
 class SaveScreen extends StatefulWidget {
-  // ignore: use_super_parameters
-  const SaveScreen({Key? key}) : super(key: key);
+  final Map<String, dynamic>? goalData;
+  const SaveScreen({super.key, this.goalData});
 
   @override
-  // ignore: library_private_types_in_public_api
-  _SaveScreenState createState() => _SaveScreenState();
+  State<SaveScreen> createState() => _SaveScreenState();
 }
 
 class _SaveScreenState extends State<SaveScreen> {
@@ -19,24 +19,29 @@ class _SaveScreenState extends State<SaveScreen> {
   final _goalNameController = TextEditingController();
   final _goalAmountController = TextEditingController();
   final _goalDateController = TextEditingController();
-  
+
   String? _selectedSource;
   String? _selectedAccount;
   String? _selectedMobileMoneyProvider;
   bool _formIsValid = false;
-  bool _showMobileMoneyFields = false;
+  // ignore: unused_field
+  final bool _showMobileMoneyFields = false;
   DateTime? _selectedDate;
-  
-  // Formatter for Ugandan Shillings
+  bool _hasPrefilledGoal = false;
+  // ignore: unused_field
+  final bool _isLoading = false;
+
   final currencyFormatter = NumberFormat.currency(
     symbol: 'UGX ',
     decimalDigits: 0,
     locale: 'en_UG',
   );
 
-  // Sample data
   final List<String> fundingSources = ['Bank Transfer', 'Mobile Money'];
-  final List<String> mobileMoneyProviders = ['MTN Mobile Money', 'Airtel Money'];
+  final List<String> mobileMoneyProviders = [
+    'MTN Mobile Money',
+    'Airtel Money'
+  ];
   final List<Map<String, dynamic>> savingsAccounts = [
     {'name': 'Main Savings', 'balance': 1500000},
     {'name': 'Emergency Fund', 'balance': 500000},
@@ -45,49 +50,157 @@ class _SaveScreenState extends State<SaveScreen> {
   ];
   final List<int> quickAmounts = [50000, 100000, 500000];
 
-  // Check if all required fields are filled
-  void _validateForm() {
-    final amountValid = _amountController.text.isNotEmpty;
-    final sourceValid = _selectedSource != null && _selectedSource!.isNotEmpty;
-    final accountValid = _selectedAccount != null && _selectedAccount!.isNotEmpty;
-    
-    // Additional validation for mobile money
-    bool mobileMoneyValid = true;
-    if (_selectedSource == 'Mobile Money') {
-      final providerValid = _selectedMobileMoneyProvider != null && 
-                           _selectedMobileMoneyProvider!.isNotEmpty;
-      final phoneValid = _phoneNumberController.text.isNotEmpty && 
-                        _phoneNumberController.text.length >= 10;
-      mobileMoneyValid = providerValid && phoneValid;
-    }
-    
-    setState(() {
-      _formIsValid = amountValid && sourceValid && accountValid && mobileMoneyValid;
-    });
-  }
-
   @override
   void initState() {
     super.initState();
-    // Add listeners to track form changes
     _amountController.addListener(_validateForm);
     _phoneNumberController.addListener(_validateForm);
+    _initializeWithGoalData();
   }
 
-  Future<void> _selectDate(BuildContext context) async {
-    final DateTime now = DateTime.now();
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: _selectedDate ?? now,
-      firstDate: now,
-      lastDate: DateTime(now.year + 10),
-    );
-    if (picked != null && picked != _selectedDate) {
+  void _initializeWithGoalData() {
+    if (widget.goalData != null) {
       setState(() {
-        _selectedDate = picked;
-        _goalDateController.text = DateFormat('dd MMM yyyy').format(picked);
+        _hasPrefilledGoal = true;
+        _goalNameController.text = widget.goalData!['goalName'];
+        _goalAmountController.text =
+            widget.goalData!['targetAmount'].toString();
+
+        if (widget.goalData!['targetDate'] != null) {
+          _selectedDate = widget.goalData!['targetDate'];
+          _goalDateController.text =
+              DateFormat('dd MMM yyyy').format(_selectedDate!);
+        }
+
+        if (widget.goalData!['contributionAmount'] != null) {
+          _amountController.text =
+              widget.goalData!['contributionAmount'].toString();
+        }
+
+        String category = widget.goalData!['category'];
+        for (var account in savingsAccounts) {
+          if (account['name'].toString().contains(category)) {
+            _selectedAccount = account['name'] as String;
+            break;
+          }
+        }
+
+        if (_selectedAccount == null && savingsAccounts.isNotEmpty) {
+          _selectedAccount = savingsAccounts[0]['name'] as String;
+        }
+
+        if (widget.goalData!['notes'] != null &&
+            widget.goalData!['notes'].toString().isNotEmpty) {
+          _noteController.text = "For goal: ${widget.goalData!['notes']}";
+        }
+        _selectedSource = fundingSources[0];
       });
+      _validateForm();
     }
+  }
+
+  void _validateForm() {
+    final amountValid = _amountController.text.isNotEmpty;
+    final sourceValid = _selectedSource != null && _selectedSource!.isNotEmpty;
+    final accountValid =
+        _selectedAccount != null && _selectedAccount!.isNotEmpty;
+
+    bool mobileMoneyValid = true;
+    if (_selectedSource == 'Mobile Money') {
+      final providerValid = _selectedMobileMoneyProvider != null &&
+          _selectedMobileMoneyProvider!.isNotEmpty;
+      final phoneValid = _phoneNumberController.text.isNotEmpty &&
+          _phoneNumberController.text.length >= 10;
+      mobileMoneyValid = providerValid && phoneValid;
+    }
+
+    setState(() {
+      _formIsValid =
+          amountValid && sourceValid && accountValid && mobileMoneyValid;
+    });
+  }
+
+  void _showMobileMoneyConfirmation(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Confirm Mobile Money Deposit'),
+          content: const Text(
+              'Are you sure you want to proceed with Mobile Money deposit?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _processDeposit(context);
+              },
+              child: const Text('Confirm'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _processDeposit(BuildContext context) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Saving process started...')),
+    );
+    // Simulate processing time
+  Future.delayed(const Duration(seconds: 1), () {
+    // Show success dialog
+    showDialog(
+      // ignore: use_build_context_synchronously
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Success!'),
+          content: const Text('Your money has been saved successfully.'),
+          actions: [
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context); // Close dialog
+                Navigator.of(context).popUntil((route) => route.isFirst); // Go to home
+              },
+              child: const Text('Back to Home'),
+            ),
+          ],
+        );
+      },
+    );
+  });
+    // Here, you can add API integration for deposit processing
+  }
+  // ignore: unused_element
+  void _showSavingsGoalDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Set Savings Goal'),
+          content: const Text(
+              'Would you like to set a savings goal for this amount?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('No'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.pop(context);
+                // Implement goal setting logic
+              },
+              child: const Text('Yes'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   @override
@@ -95,6 +208,7 @@ class _SaveScreenState extends State<SaveScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Save Money'),
+        backgroundColor: Colors.green,
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -104,49 +218,61 @@ class _SaveScreenState extends State<SaveScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Amount Input
+              // Display goal banner if navigated from goal creation
+              if (_hasPrefilledGoal) _buildGoalBanner(),
+
+              // Amount field
               TextFormField(
                 controller: _amountController,
                 decoration: InputDecoration(
-                  labelText: 'Amount (UGX)',
-                  prefixText: 'UGX ',
+                  labelText: 'Amount to Save (UGX)',
                   border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.attach_money),
+                  helperText: 'Enter the amount you want to save',
+                  suffixText: 'UGX',
                 ),
                 keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                 validator: (value) {
                   if (value == null || value.isEmpty) {
                     return 'Please enter an amount';
+                  }
+                  if (double.tryParse(value) == null ||
+                      double.parse(value) <= 0) {
+                    return 'Please enter a valid amount';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 16),
 
-              // Quick Amount Buttons
+              // Quick amount buttons
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: quickAmounts.map((amount) {
-                  return Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: ElevatedButton(
-                        onPressed: () {
-                          _amountController.text = amount.toString();
-                          _validateForm();
-                        },
-                        child: Text(currencyFormatter.format(amount)),
-                      ),
+                  return ElevatedButton(
+                    onPressed: () {
+                      setState(() {
+                        _amountController.text = amount.toString();
+                      });
+                      _validateForm();
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue.shade50,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 12),
                     ),
+                    child: Text(currencyFormatter.format(amount)),
                   );
                 }).toList(),
               ),
-              const SizedBox(height: 24),
+              const SizedBox(height: 16),
 
-              // Source of Funds Dropdown
+              // Funding source dropdown
               DropdownButtonFormField<String>(
                 decoration: const InputDecoration(
-                  labelText: 'Source of Funds',
+                  labelText: 'Funding Source',
                   border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.account_balance_wallet),
                 ),
                 value: _selectedSource,
                 items: fundingSources.map((String source) {
@@ -155,34 +281,28 @@ class _SaveScreenState extends State<SaveScreen> {
                     child: Text(source),
                   );
                 }).toList(),
-                onChanged: (value) {
+                onChanged: (String? newValue) {
                   setState(() {
-                    _selectedSource = value;
-                    // Show mobile money fields if Mobile Money is selected
-                    _showMobileMoneyFields = value == 'Mobile Money';
-                    // Reset mobile money fields if source changes
-                    if (!_showMobileMoneyFields) {
-                      _selectedMobileMoneyProvider = null;
-                      _phoneNumberController.clear();
-                    }
+                    _selectedSource = newValue;
                     _validateForm();
                   });
                 },
                 validator: (value) {
                   if (value == null || value.isEmpty) {
-                    return 'Please select a source';
+                    return 'Please select a funding source';
                   }
                   return null;
                 },
               ),
               const SizedBox(height: 16),
 
-              // Mobile Money Provider dropdown (conditionally shown)
-              if (_showMobileMoneyFields) ...[
+              // Mobile Money fields if Mobile Money is selected
+              if (_selectedSource == 'Mobile Money') ...[
                 DropdownButtonFormField<String>(
                   decoration: const InputDecoration(
                     labelText: 'Mobile Money Provider',
                     border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.phone_android),
                   ),
                   value: _selectedMobileMoneyProvider,
                   items: mobileMoneyProviders.map((String provider) {
@@ -191,53 +311,37 @@ class _SaveScreenState extends State<SaveScreen> {
                       child: Text(provider),
                     );
                   }).toList(),
-                  onChanged: (value) {
+                  onChanged: (String? newValue) {
                     setState(() {
-                      _selectedMobileMoneyProvider = value;
+                      _selectedMobileMoneyProvider = newValue;
                       _validateForm();
                     });
                   },
                   validator: (value) {
-                    if (_showMobileMoneyFields && (value == null || value.isEmpty)) {
+                    if (_selectedSource == 'Mobile Money' &&
+                        (value == null || value.isEmpty)) {
                       return 'Please select a mobile money provider';
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 16),
-
-                // Phone Number input (conditionally shown)
                 TextFormField(
                   controller: _phoneNumberController,
-                  decoration: InputDecoration(
-                    labelText: 'Mobile Money Number',
-                    hintText: _selectedMobileMoneyProvider == 'MTN Mobile Money' 
-                              ? '077XXXXXXX' : '075XXXXXXX',
-                    border: const OutlineInputBorder(),
-                    prefixText: '+256 ',
+                  decoration: const InputDecoration(
+                    labelText: 'Phone Number',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.phone),
+                    helperText: 'Enter your mobile money number',
                   ),
                   keyboardType: TextInputType.phone,
-                  inputFormatters: [
-                    FilteringTextInputFormatter.digitsOnly,
-                    LengthLimitingTextInputFormatter(10),
-                  ],
                   validator: (value) {
-                    if (_showMobileMoneyFields) {
+                    if (_selectedSource == 'Mobile Money') {
                       if (value == null || value.isEmpty) {
-                        return 'Please enter a mobile money number';
+                        return 'Please enter your phone number';
                       }
                       if (value.length < 10) {
-                        return 'Please enter a valid 10-digit number';
-                      }
-                      
-                      // Validate prefix based on provider
-                      if (_selectedMobileMoneyProvider == 'MTN Mobile Money' && 
-                          !value.startsWith('077') && !value.startsWith('078')) {
-                        return 'MTN numbers should start with 077 or 078';
-                      }
-                      if (_selectedMobileMoneyProvider == 'Airtel Money' && 
-                          !value.startsWith('075') && !value.startsWith('070')) {
-                        return 'Airtel numbers should start with 075 or 070';
+                        return 'Please enter a valid phone number';
                       }
                     }
                     return null;
@@ -246,24 +350,24 @@ class _SaveScreenState extends State<SaveScreen> {
                 const SizedBox(height: 16),
               ],
 
-              // Target Account Dropdown
+              // Account dropdown
               DropdownButtonFormField<String>(
                 decoration: const InputDecoration(
                   labelText: 'Save To',
                   border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.savings),
                 ),
                 value: _selectedAccount,
                 items: savingsAccounts.map((account) {
                   return DropdownMenuItem<String>(
                     value: account['name'] as String,
                     child: Text(
-                      '${account['name']} - ${currencyFormatter.format(account['balance'])}',
-                    ),
+                        '${account['name']} (${currencyFormatter.format(account['balance'])})'),
                   );
                 }).toList(),
-                onChanged: (value) {
+                onChanged: (String? newValue) {
                   setState(() {
-                    _selectedAccount = value;
+                    _selectedAccount = newValue;
                     _validateForm();
                   });
                 },
@@ -276,58 +380,76 @@ class _SaveScreenState extends State<SaveScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Notes Field
+              // Notes field
               TextFormField(
                 controller: _noteController,
                 decoration: const InputDecoration(
-                  labelText: 'Note (Optional)',
-                  hintText: 'Add reference, purpose, or other details',
+                  labelText: 'Notes',
                   border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.note),
+                  helperText: 'Add any notes about this saving',
                 ),
-                maxLines: 2,
+                maxLines: 3,
               ),
               const SizedBox(height: 24),
 
-              // Transaction Details Card
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Transaction ID: #TR${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        'Date: ${DateFormat('dd MMM yyyy').format(DateTime.now())}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 24),
-
-              // Submit Button
+              // Confirm button
               ElevatedButton(
                 onPressed: _formIsValid
                     ? () {
                         if (_formKey.currentState!.validate()) {
-                          // Show savings goal dialog before proceeding
-                          _showSavingsGoalDialog(context);
+                          if (_selectedSource == 'Mobile Money') {
+                            _showMobileMoneyConfirmation(context);
+                          } else {
+                            _processDeposit(context);
+                          }
                         }
                       }
-                    : null, // Button is disabled when form is not valid
+                    : null,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.all(16),
                   backgroundColor: _formIsValid ? Colors.green : null,
                   disabledBackgroundColor: Colors.grey.shade300,
                 ),
-                child: const Text(
-                  'Confirm Saving',
-                  style: TextStyle(fontSize: 16, color: Colors.white),
+                child: Text(
+                  'Save ${_amountController.text.isNotEmpty ? currencyFormatter.format(double.parse(_amountController.text)) : ""}',
+                  style: const TextStyle(fontSize: 16, color: Colors.white),
+                ),
+              ),
+
+              const SizedBox(height: 16),
+
+              // Success message area for feedback after saving
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Column(
+                  children: [
+                    const Text(
+                      'Thank you for saving!',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.green,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Your contribution helps you get closer to your goals.',
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    OutlinedButton.icon(
+                      onPressed: () {
+                        Navigator.pop(context); // Return to previous screen
+                      },
+                      icon: const Icon(Icons.arrow_back),
+                      label: const Text('Back to Goals'),
+                    ),
+                  ],
                 ),
               ),
             ],
@@ -337,235 +459,51 @@ class _SaveScreenState extends State<SaveScreen> {
     );
   }
 
-  // Show savings goal dialog
-  void _showSavingsGoalDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (context) => AlertDialog(
-        title: const Text('Set a Savings Goal'),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                'Would you like to set a savings goal for this account? This helps track your progress!',
-                style: TextStyle(fontSize: 14),
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _goalNameController,
-                decoration: const InputDecoration(
-                  labelText: 'Goal Name',
-                  hintText: 'e.g., New Car, Wedding, Vacation',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _goalAmountController,
-                decoration: const InputDecoration(
-                  labelText: 'Target Amount (UGX)',
-                  prefixText: 'UGX ',
-                  border: OutlineInputBorder(),
-                ),
-                keyboardType: TextInputType.number,
-                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _goalDateController,
-                decoration: const InputDecoration(
-                  labelText: 'Target Date',
-                  border: OutlineInputBorder(),
-                  suffixIcon: Icon(Icons.calendar_today),
-                ),
-                readOnly: true,
-                onTap: () => _selectDate(context),
-              ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              
-              // If mobile money is selected, show PIN authorization dialog
-              if (_selectedSource == 'Mobile Money') {
-                _showMobileMoneyConfirmation(context);
-              } else {
-                _processDeposit(context);
-              }
-            },
-            child: const Text('Skip For Now'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              // Validate goal inputs
-              if (_goalNameController.text.isEmpty ||
-                  _goalAmountController.text.isEmpty ||
-                  _goalDateController.text.isEmpty) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Please fill all goal details or skip'),
-                    backgroundColor: Colors.orange,
+  Widget _buildGoalBanner() {
+    return Card(
+      elevation: 2.0,
+      color: Colors.blue.shade50,
+      margin: const EdgeInsets.only(bottom: 16.0),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.emoji_events, color: Colors.amber),
+                const SizedBox(width: 8),
+                Text(
+                  'Goal: ${_goalNameController.text}',
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
                   ),
-                );
-                return;
-              }
-              
-              // Process goal creation
-              Navigator.of(context).pop();
-              _showGoalCreatedConfirmation(context);
-            },
-            child: const Text('Set Goal'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Show goal created confirmation
-  void _showGoalCreatedConfirmation(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Goal Created Successfully'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Icon(Icons.emoji_events, color: Colors.amber, size: 48),
-            const SizedBox(height: 16),
-            Text('Goal: ${_goalNameController.text}'),
-            Text('Target: ${currencyFormatter.format(int.parse(_goalAmountController.text))}'),
-            Text('By: ${_goalDateController.text}'),
-            const SizedBox(height: 12),
-            const Text('Your first contribution will be made with this deposit!'),
-          ],
-        ),
-        actions: [
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              
-              // Proceed with deposit after goal creation
-              if (_selectedSource == 'Mobile Money') {
-                _showMobileMoneyConfirmation(context);
-              } else {
-                _processDeposit(context);
-              }
-            },
-            child: const Text('Continue'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Show mobile money confirmation dialog
-  void _showMobileMoneyConfirmation(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        // ignore: unnecessary_brace_in_string_interps
-        title: Text('${_selectedMobileMoneyProvider} Authorization'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('A request has been sent to your mobile phone.'),
-            const SizedBox(height: 12),
-            Text('Please check your phone and enter your PIN to authorize:'),
-            const SizedBox(height: 12),
-            Text('Amount: ${currencyFormatter.format(int.parse(_amountController.text))}', 
-                 style: const TextStyle(fontWeight: FontWeight.bold)),
-            Text('Phone: +256 ${_phoneNumberController.text}', 
-                 style: const TextStyle(fontWeight: FontWeight.bold)),
-            const SizedBox(height: 16),
-            const Text('This dialog simulates the mobile money authorization process.'),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              Navigator.of(context).pop();
-              _processDeposit(context);
-            },
-            child: const Text('Simulate Authorized'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  // Process the deposit after confirmation
-  void _processDeposit(BuildContext context) {
-    // Show processing message
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Processing Saving...')),
-    );
-    
-    // Simulate processing delay
-    Future.delayed(const Duration(seconds: 2), () {
-      // Show success dialog
-      showDialog(
-        // ignore: use_build_context_synchronously
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          title: const Text('Savings Successful'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Icon(Icons.check_circle, color: Colors.green, size: 48),
-              const SizedBox(height: 16),
-              Text('Amount: ${currencyFormatter.format(int.parse(_amountController.text))}'),
-              Text('Account: $_selectedAccount'),
-              if (_selectedSource == 'Mobile Money')
-                // ignore: unnecessary_brace_in_string_interps
-                Text('From: ${_selectedMobileMoneyProvider} (+256 ${_phoneNumberController.text})'),
-              if (_goalNameController.text.isNotEmpty)
-                Text('Goal: ${_goalNameController.text}'),
-              const SizedBox(height: 12),
-              Text('Reference ID: #TR${DateTime.now().millisecondsSinceEpoch.toString().substring(7)}'),
-              const SizedBox(height: 16),
-              const Text('A confirmation SMS has been sent to your phone.'),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+                'Target: ${currencyFormatter.format(double.parse(_goalAmountController.text))}'),
+            if (_selectedDate != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                  'Deadline: ${DateFormat('dd MMM yyyy').format(_selectedDate!)}'),
             ],
-          ),
-          actions: [
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Close dialog
-                Navigator.of(context).pop(); // Return to previous screen
-              },
-              child: const Text('Done'),
+            const SizedBox(height: 8),
+            LinearProgressIndicator(
+              value: 0.0, // This would be calculated based on current progress
+              backgroundColor: Colors.grey.shade200,
+              valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
+            ),
+            const SizedBox(height: 4),
+            const Text(
+              'Getting started on your goal!',
+              style: TextStyle(fontStyle: FontStyle.italic, fontSize: 12),
             ),
           ],
         ),
-      );
-    });
-  }
-
-  @override
-  void dispose() {
-    _amountController.removeListener(_validateForm);
-    _phoneNumberController.removeListener(_validateForm);
-    _amountController.dispose();
-    _noteController.dispose();
-    _phoneNumberController.dispose();
-    _goalNameController.dispose();
-    _goalAmountController.dispose();
-    _goalDateController.dispose();
-    super.dispose();
+      ),
+    );
   }
 }

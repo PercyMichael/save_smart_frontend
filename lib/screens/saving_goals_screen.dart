@@ -1,391 +1,571 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:percent_indicator/circular_percent_indicator.dart';
+import 'save_screen.dart';  // Import the SaveScreen
 
-// Define the theme color as a constant for easy reuse
-const Color themeColor = Color(0xFF8EB55D); // Sage green color
-
-class SavingsGoal {
-  final String id;
-  final String name;
-  final double targetAmount;
-  final double currentAmount;
-  final DateTime targetDate;
-  final String iconName;
-  final Color color;
-
-  SavingsGoal({
-    required this.id,
-    required this.name,
-    required this.targetAmount,
-    required this.currentAmount,
-    required this.targetDate,
-    required this.iconName,
-    required this.color,
-  });
-}
-
-class SavingsGoalsScreen extends StatefulWidget {
+class SavingsGoalScreen extends StatefulWidget {
   // ignore: use_super_parameters
-  const SavingsGoalsScreen({Key? key}) : super(key: key);
+  const SavingsGoalScreen({Key? key}) : super(key: key);
 
   @override
   // ignore: library_private_types_in_public_api
-  _SavingsGoalsScreenState createState() => _SavingsGoalsScreenState();
+  _SavingsGoalScreenState createState() => _SavingsGoalScreenState();
 }
 
-class _SavingsGoalsScreenState extends State<SavingsGoalsScreen> {
-  final List<SavingsGoal> _goals = [
-    SavingsGoal(
-      id: '1',
-      name: 'Vacation',
-      targetAmount: 3000.00,
-      currentAmount: 1250.00,
-      targetDate: DateTime(2025, 8, 15),
-      iconName: 'beach_access',
-      color: themeColor,
-    ),
-    SavingsGoal(
-      id: '2',
-      name: 'New Laptop',
-      targetAmount: 1500.00,
-      currentAmount: 750.00,
-      targetDate: DateTime(2025, 5, 1),
-      iconName: 'laptop',
-      color: themeColor,
-    ),
-    SavingsGoal(
-      id: '3',
-      name: 'Emergency Fund',
-      targetAmount: 10000.00,
-      currentAmount: 3500.00,
-      targetDate: DateTime(2025, 12, 31),
-      iconName: 'savings',
-      color: themeColor,
-    ),
+class _SavingsGoalScreenState extends State<SavingsGoalScreen> {
+  final _formKey = GlobalKey<FormState>();
+  
+  // Controllers
+  final _goalNameController = TextEditingController();
+  final _targetAmountController = TextEditingController();
+  final _currentBalanceController = TextEditingController();
+  final _contributionAmountController = TextEditingController();
+  final _notesController = TextEditingController();
+  
+  // Values
+  DateTime _targetDate = DateTime.now().add(const Duration(days: 365));
+  String _selectedCategory = 'Education';
+  String _selectedPriority = 'Medium';
+  String _selectedFrequency = 'Weekly';
+  
+  // Category options
+  final List<String> _categories = [
+    'Education', 
+    'Home', 
+    'Emergency Fund', 
+    'Business', 
+    'Agriculture', 
+    'Wedding', 
+    'Vehicle', 
+    'Family', 
+    'Healthcare',
+    'Other'
   ];
-
-  final currencyFormat = NumberFormat.currency(symbol: '\$');
-  final dateFormat = DateFormat('MMM dd, yyyy');
+  
+  final List<String> _priorities = ['Low', 'Medium', 'High'];
+  final List<String> _frequencies = ['Daily', 'Weekly', 'Monthly'];
+  
+  // Format currency in UGX
+  final currencyFormat = NumberFormat.currency(
+    locale: 'en_UG', 
+    symbol: 'UGX ', 
+    decimalDigits: 0
+  );
   
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Savings Goals'),
-        backgroundColor: themeColor,
-        foregroundColor: Colors.white,
+        title: const Text('Create Savings Goal'),
+        backgroundColor: Colors.green,
+        actions: [
+          // Skip button in the app bar
+          TextButton(
+            onPressed: () {
+              // Navigate to SaveScreen with default values
+              _skipToSaveScreen(context);
+            },
+            child: const Text(
+              'Skip',
+              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
+          ),
+        ],
       ),
-      body: _goals.isEmpty
-          ? const Center(
-              child: Text(
-                'No savings goals yet.\nTap + to add a new goal.',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 16, color: Colors.grey),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // Goal Preview Card
+              goalPreviewCard(),
+              const SizedBox(height: 24),
+              
+              // Form Fields
+              const Text(
+                'Goal Details',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
-            )
-          : ListView.builder(
-              padding: const EdgeInsets.all(16.0),
-              itemCount: _goals.length,
-              itemBuilder: (context, index) {
-                final goal = _goals[index];
-                final progress = goal.currentAmount / goal.targetAmount;
-                final daysLeft = goal.targetDate.difference(DateTime.now()).inDays;
-                
-                return Card(
-                  margin: const EdgeInsets.only(bottom: 16.0),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            CircleAvatar(
-                              // ignore: deprecated_member_use
-                              backgroundColor: themeColor.withOpacity(0.2),
-                              child: Icon(
-                                _getIconData(goal.iconName),
-                                color: themeColor,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    goal.name,
-                                    style: const TextStyle(
-                                      fontSize: 18,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  Text(
-                                    '${daysLeft > 0 ? '$daysLeft days left' : 'Target date passed'} • ${dateFormat.format(goal.targetDate)}',
-                                    style: TextStyle(
-                                      color: daysLeft < 30 
-                                          ? Colors.red 
-                                          : Colors.grey[600],
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.more_vert),
-                              onPressed: () {
-                                _showGoalOptions(context, goal);
-                              },
-                            ),
-                          ],
+              const SizedBox(height: 16),
+              
+              // Goal Name
+              TextFormField(
+                controller: _goalNameController,
+                decoration: const InputDecoration(
+                  labelText: 'Goal Name',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.bookmark),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a goal name';
+                  }
+                  return null;
+                },
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 16),
+              
+              // Target Amount
+              TextFormField(
+                controller: _targetAmountController,
+                decoration: const InputDecoration(
+                  labelText: 'Target Amount (UGX)',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.attach_money),
+                  helperText: 'Total amount needed to achieve your goal in Ugandan Shillings',
+                ),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter target amount';
+                  }
+                  if (double.tryParse(value) == null) {
+                    return 'Please enter a valid number';
+                  }
+                  return null;
+                },
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 16),
+              
+              // Current Balance
+              TextFormField(
+                controller: _currentBalanceController,
+                decoration: const InputDecoration(
+                  labelText: 'Current Savings (UGX)',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.savings),
+                  helperText: 'How much have you saved already in Ugandan Shillings?',
+                ),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter current savings';
+                  }
+                  if (double.tryParse(value) == null) {
+                    return 'Please enter a valid number';
+                  }
+                  return null;
+                },
+                onChanged: (_) => setState(() {}),
+              ),
+              const SizedBox(height: 16),
+              
+              // Target Date
+              InkWell(
+                onTap: () async {
+                  final DateTime? picked = await showDatePicker(
+                    context: context,
+                    initialDate: _targetDate,
+                    firstDate: DateTime.now(),
+                    lastDate: DateTime.now().add(const Duration(days: 3650)),
+                  );
+                  if (picked != null && picked != _targetDate) {
+                    setState(() {
+                      _targetDate = picked;
+                    });
+                  }
+                },
+                child: InputDecorator(
+                  decoration: const InputDecoration(
+                    labelText: 'Target Date',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.calendar_today),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(DateFormat('dd MMM yyyy').format(_targetDate)),
+                      const Icon(Icons.arrow_drop_down),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              // Category Dropdown
+              DropdownButtonFormField<String>(
+                decoration: const InputDecoration(
+                  labelText: 'Category',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.category),
+                ),
+                value: _selectedCategory,
+                items: _categories.map((String category) {
+                  return DropdownMenuItem<String>(
+                    value: category,
+                    child: Text(category),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  if (newValue != null) {
+                    setState(() {
+                      _selectedCategory = newValue;
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              
+              // Priority Level
+              DropdownButtonFormField<String>(
+                decoration: const InputDecoration(
+                  labelText: 'Priority Level',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.flag),
+                ),
+                value: _selectedPriority,
+                items: _priorities.map((String priority) {
+                  return DropdownMenuItem<String>(
+                    value: priority,
+                    child: Text(priority),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  if (newValue != null) {
+                    setState(() {
+                      _selectedPriority = newValue;
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              
+              // Contribution Frequency
+              DropdownButtonFormField<String>(
+                decoration: const InputDecoration(
+                  labelText: 'Contribution Frequency',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.repeat),
+                ),
+                value: _selectedFrequency,
+                items: _frequencies.map((String frequency) {
+                  return DropdownMenuItem<String>(
+                    value: frequency,
+                    child: Text(frequency),
+                  );
+                }).toList(),
+                onChanged: (String? newValue) {
+                  if (newValue != null) {
+                    setState(() {
+                      _selectedFrequency = newValue;
+                    });
+                  }
+                },
+              ),
+              const SizedBox(height: 16),
+              
+              // Contribution Amount
+              TextFormField(
+                controller: _contributionAmountController,
+                decoration: InputDecoration(
+                  labelText: 'Contribution Amount (UGX)',
+                  border: const OutlineInputBorder(),
+                  prefixIcon: const Icon(Icons.add_card),
+                  helperText: 'How much will you save $_selectedFrequency in Ugandan Shillings?',
+                ),
+                keyboardType: TextInputType.number,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter contribution amount';
+                  }
+                  if (double.tryParse(value) == null) {
+                    return 'Please enter a valid number';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 16),
+              
+              // Notes
+              TextFormField(
+                controller: _notesController,
+                decoration: const InputDecoration(
+                  labelText: 'Notes',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.note),
+                  helperText: 'Why is this goal important to you?',
+                ),
+                maxLines: 3,
+              ),
+              const SizedBox(height: 24),
+              
+              // Buttons section
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Row with Save and Contribute buttons
+                  Row(
+                    children: [
+                      // Save Button
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.green,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                          onPressed: () {
+                            if (_formKey.currentState!.validate()) {
+                              // Save the goal data
+                              _saveGoal(context);
+                              
+                              // Navigate to SaveScreen after creating the goal
+                              _navigateToSaveScreen(context);
+                            }
+                          },
+                          child: const Text(
+                            'Create Goal',
+                            style: TextStyle(fontSize: 16),
+                          ),
                         ),
-                        const SizedBox(height: 16),
-                        LinearProgressIndicator(
-                          value: progress,
-                          minHeight: 8,
-                          backgroundColor: Colors.grey[200],
-                          valueColor: AlwaysStoppedAnimation<Color>(themeColor),
+                      ),
+                      const SizedBox(width: 12),
+                      // Contribute Button
+                      Expanded(
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.blue,
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                          ),
+                          onPressed: () {
+                            if (_formKey.currentState!.validate()) {
+                              // Save the goal data and navigate to save screen
+                              _saveGoalAndNavigate(context);
+                            }
+                          },
+                          child: const Text(
+                            'Create & Contribute',
+                            style: TextStyle(fontSize: 16),
+                          ),
                         ),
-                        const SizedBox(height: 8),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              currencyFormat.format(goal.currentAmount),
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            Text(
-                              currencyFormat.format(goal.targetAmount),
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 16,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              '${(progress * 100).toStringAsFixed(1)}% saved',
-                              style: TextStyle(
-                                color: Colors.grey[600],
-                                fontSize: 14,
-                              ),
-                            ),
-                            OutlinedButton.icon(
-                              icon: const Icon(Icons.add, color: themeColor),
-                              label: Text('Add Money', style: TextStyle(color: themeColor)),
-                              onPressed: () {
-                                _showAddMoneyDialog(context, goal);
-                              },
-                              style: OutlinedButton.styleFrom(
-                                side: BorderSide(color: themeColor),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ],
+                      ),
+                    ],
+                  ),
+                  
+                  // Skip button below main buttons
+                  const SizedBox(height: 16),
+                  TextButton(
+                    onPressed: () {
+                      // Navigate to SaveScreen with default values
+                      _skipToSaveScreen(context);
+                    },
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
+                    child: const Text(
+                      'Skip for now',
+                      style: TextStyle(fontSize: 16),
                     ),
                   ),
-                );
-              },
-            ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: themeColor,
-        foregroundColor: Colors.white,
-        onPressed: () {
-          _showAddGoalDialog(context);
-        },
-        child: const Icon(Icons.add),
-      ),
-    );
-  }
-
-  IconData _getIconData(String iconName) {
-    switch (iconName) {
-      case 'beach_access':
-        return Icons.beach_access;
-      case 'laptop':
-        return Icons.laptop;
-      case 'savings':
-        return Icons.savings;
-      case 'home':
-        return Icons.home;
-      case 'directions_car':
-        return Icons.directions_car;
-      case 'school':
-        return Icons.school;
-      default:
-        return Icons.star;
-    }
-  }
-
-  void _showGoalOptions(BuildContext context, SavingsGoal goal) {
-    showModalBottomSheet(
-      context: context,
-      builder: (BuildContext context) {
-        return SafeArea(
-          child: Wrap(
-            children: [
-              ListTile(
-                leading: Icon(Icons.edit, color: themeColor),
-                title: const Text('Edit Goal'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showEditGoalDialog(context, goal);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.delete, color: Colors.red),
-                title: const Text('Delete Goal'),
-                onTap: () {
-                  Navigator.pop(context);
-                  _showDeleteConfirmation(context, goal);
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.history, color: themeColor),
-                title: const Text('View Contributions'),
-                onTap: () {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Contribution history would open here'),
-                      backgroundColor: themeColor,
-                    ),
-                  );
-                },
+                ],
               ),
             ],
           ),
-        );
-      },
+        ),
+      ),
     );
   }
-
-  void _showAddMoneyDialog(BuildContext context, SavingsGoal goal) {
-    final TextEditingController amountController = TextEditingController();
+  
+  // Method to save the goal and show success message
+  void _saveGoal(BuildContext context) {
+    // Here you would save the goal data to your database
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Savings goal created successfully!')),
+    );
+  }
+  
+  // Method to save the goal and navigate to the save screen
+  void _saveGoalAndNavigate(BuildContext context) {
+    // First save the goal
+    _saveGoal(context);
     
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: Text('Add Money to ${goal.name}'),
-          content: TextField(
-            controller: amountController,
-            keyboardType: TextInputType.number,
-            decoration: InputDecoration(
-              labelText: 'Amount',
-              prefixText: '\$',
-              border: OutlineInputBorder(),
-              focusedBorder: OutlineInputBorder(
-                borderSide: BorderSide(color: themeColor, width: 2.0),
-              ),
-            ),
-          ),
-          actions: [
-            TextButton(
-              child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: Text('Add', style: TextStyle(color: themeColor)),
-              onPressed: () {
-                // Validate and add money to goal
-                if (amountController.text.isNotEmpty) {
-                  double amount = double.tryParse(amountController.text) ?? 0;
-                  if (amount > 0) {
-                    setState(() {
-                      int index = _goals.indexWhere((g) => g.id == goal.id);
-                      if (index != -1) {
-                        _goals[index] = SavingsGoal(
-                          id: goal.id,
-                          name: goal.name,
-                          targetAmount: goal.targetAmount,
-                          currentAmount: goal.currentAmount + amount,
-                          targetDate: goal.targetDate,
-                          iconName: goal.iconName,
-                          color: themeColor,
-                        );
-                      }
-                    });
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('\$${amount.toStringAsFixed(2)} added to ${goal.name}'),
-                        backgroundColor: themeColor,
-                      ),
-                    );
-                  }
-                }
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
+    // Navigate to the SaveScreen with the goal data
+    _navigateToSaveScreen(context);
   }
-
-  void _showAddGoalDialog(BuildContext context) {
-    // This would be a form to create a new goal
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Add goal form would open here'),
-        backgroundColor: themeColor,
+  
+  // New method to navigate to SaveScreen with the current form data
+  void _navigateToSaveScreen(BuildContext context) {
+    // Create a map of the goal data to pass to the SaveScreen
+    final goalData = {
+      'goalName': _goalNameController.text,
+      'targetAmount': double.parse(_targetAmountController.text),
+      'currentBalance': double.parse(_currentBalanceController.text),
+      'targetDate': _targetDate,
+      'category': _selectedCategory,
+      'priority': _selectedPriority,
+      'frequency': _selectedFrequency,
+      'contributionAmount': double.parse(_contributionAmountController.text),
+      'notes': _notesController.text,
+    };
+    
+    // Navigate to the SaveScreen and pass the goal data
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SaveScreen(goalData: goalData),
       ),
     );
   }
-
-  void _showEditGoalDialog(BuildContext context, SavingsGoal goal) {
-    // This would be a form to edit an existing goal
+  
+  // New method to skip to SaveScreen with default values
+  void _skipToSaveScreen(BuildContext context) {
+    // Create default goal data to pass to SaveScreen
+    final defaultGoalData = {
+      'goalName': 'Quick Save',
+      'targetAmount': 0.0,
+      'currentBalance': 0.0,
+      'targetDate': DateTime.now().add(const Duration(days: 365)),
+      'category': 'Other',
+      'priority': 'Medium',
+      'frequency': 'Weekly',
+      'contributionAmount': 0.0,
+      'notes': '',
+    };
+    
+    // Show feedback that we're skipping
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Edit goal form would open here'),
-        backgroundColor: themeColor,
+      const SnackBar(content: Text('Proceeding to save without creating a goal')),
+    );
+    
+    // Navigate to SaveScreen with default data
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SaveScreen(goalData: defaultGoalData),
       ),
     );
   }
-
-  void _showDeleteConfirmation(BuildContext context, SavingsGoal goal) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Delete Goal'),
-          content: Text('Are you sure you want to delete "${goal.name}"? This action cannot be undone.'),
-          actions: [
-            TextButton(
-              child: Text('Cancel', style: TextStyle(color: Colors.grey[600])),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+  
+  Widget goalPreviewCard() {
+    // Calculate progress percentage
+    double targetAmount = double.tryParse(_targetAmountController.text) ?? 0;
+    double currentBalance = double.tryParse(_currentBalanceController.text) ?? 0;
+    double progress = targetAmount > 0 ? (currentBalance / targetAmount) : 0;
+    if (progress > 1) progress = 1;
+    
+    String goalName = _goalNameController.text.isEmpty 
+    ? 'Your Savings Goal' 
+    : _goalNameController.text;
+    
+    // Days remaining calculation
+    int daysRemaining = _targetDate.difference(DateTime.now()).inDays;
+    
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          children: [
+            Text(
+              goalName,
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            TextButton(
-              child: const Text('Delete', style: TextStyle(color: Colors.red)),
-              onPressed: () {
-                setState(() {
-                  _goals.removeWhere((g) => g.id == goal.id);
-                });
-                Navigator.of(context).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('${goal.name} has been deleted'),
-                    backgroundColor: themeColor,
+            const SizedBox(height: 16),
+            
+            CircularPercentIndicator(
+              radius: 80.0,
+              lineWidth: 12.0,
+              percent: progress,
+              center: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    '${(progress * 100).toStringAsFixed(1)}%',
+                    style: const TextStyle(
+                      fontSize: 22, 
+                      fontWeight: FontWeight.bold
+                    ),
                   ),
-                );
-              },
+                  const Text('Complete')
+                ],
+              ),
+              progressColor: Colors.green,
+              backgroundColor: Colors.green.shade100,
+              animation: true,
+              animationDuration: 1000,
+            ),
+            const SizedBox(height: 16),
+            
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Current'),
+                    Text(
+                      currencyFormat.format(currentBalance),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16
+                      ),
+                    ),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    const Text('Target'),
+                    Text(
+                      currencyFormat.format(targetAmount),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 16
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            
+            const SizedBox(height: 8),
+            const Divider(),
+            const SizedBox(height: 8),
+            
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Remaining'),
+                    Text(
+                      currencyFormat.format(targetAmount - currentBalance > 0 
+                          ? targetAmount - currentBalance 
+                          : 0),
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    const Text('Time Left'),
+                    Text(
+                      '$daysRemaining days',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ],
-        );
-      },
+        ),
+      ),
     );
+  }
+  
+  @override
+  void dispose() {
+    _goalNameController.dispose();
+    _targetAmountController.dispose();
+    _currentBalanceController.dispose();
+    _contributionAmountController.dispose();
+    _notesController.dispose();
+    super.dispose();
   }
 }

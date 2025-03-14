@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'change_password_screen.dart'; // Import for ChangePasswordScreen
+import 'deposit_reminders_screen.dart'; // Import for DepositRemindersScreen
 
 class SettingsScreen extends StatefulWidget {
   // ignore: use_super_parameters
@@ -16,7 +18,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   // Settings variables
   bool _notificationsEnabled = true;
-  bool _biometricEnabled = false;
   bool _automaticSavings = true;
   String _selectedLanguage = 'English';
   final String _selectedCurrency = 'UGX';
@@ -51,18 +52,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             trailing: Icon(Icons.arrow_forward_ios, size: 16, color: primaryColor),
             onTap: () {
               // Navigate to password change screen
-            },
-          ),
-          SwitchListTile(
-            secondary: Icon(Icons.fingerprint, color: primaryColor),
-            title: const Text('Biometric Authentication'),
-            subtitle: const Text('Use fingerprint or face recognition'),
-            value: _biometricEnabled,
-            activeColor: primaryColor,
-            onChanged: (bool value) {
-              setState(() {
-                _biometricEnabled = value;
-              });
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const ChangePasswordScreen()),
+              );
             },
           ),
           SwitchListTile(
@@ -107,6 +100,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             trailing: Icon(Icons.arrow_forward_ios, size: 16, color: primaryColor),
             onTap: () {
               // Navigate to reminders screen
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const DepositRemindersScreen()),
+              );
             },
           ),
           ListTile(
