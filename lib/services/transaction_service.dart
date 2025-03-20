@@ -85,6 +85,8 @@ class TransactionService {
   static Future<void> addWithdrawal(
     double amount,
     String description,
+    String phoneNumber,
+    String destinationType,
     String userId, {
     String? goalId,
   }) async {
@@ -181,7 +183,7 @@ class TransactionService {
       final userId = "user_${_uuid.v4().substring(0, 8)}";
       
       await addDeposit(50000, "Initial deposit", userId);
-      await addWithdrawal(20000, "Withdrawal for groceries", userId);
+      await addWithdrawal(20000, "Withdrawal for groceries", "0704985597", "mobile", userId);
       await addDeposit(10000, "Savings contribution", userId);
     }
   }

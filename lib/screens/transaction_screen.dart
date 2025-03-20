@@ -1,8 +1,93 @@
 import 'package:flutter/material.dart'; 
 import 'package:intl/intl.dart';
+import 'package:uuid/uuid.dart'; // Add this package for generating unique IDs
+
+enum TransactionType { deposit, withdrawal, transfer }
+
+class TransactionModel {
+  final String id;
+  final double amount;
+  final DateTime date;
+  final TransactionType type;
+  final String description;
+  final String userId;
+  final String? goalId;
+  
+  // Additional fields for transaction details
+  final String? depositSource;
+  final String? withdrawalDestination;
+  final String? mobileProvider;
+  final String? mobileMoneyNumber;
+  final String? transferRecipient;
+
+  TransactionModel({
+    required this.id,
+    required this.amount,
+    required this.date,
+    required this.type,
+    required this.description,
+    required this.userId,
+    this.goalId,
+    this.depositSource,
+    this.withdrawalDestination,
+    this.mobileProvider,
+    this.mobileMoneyNumber,
+    this.transferRecipient,
+  });
+
+  factory TransactionModel.fromJson(Map<String, dynamic> json) {
+    return TransactionModel(
+      id: json['id'] ?? '',
+      amount: (json['amount'] ?? 0.0).toDouble(),
+      date: json['date'] != null ? DateTime.parse(json['date']) : DateTime.now(),
+      type: _parseTransactionType(json['type']),
+      description: json['description'] ?? '',
+      userId: json['userId'] ?? '',
+      goalId: json['goalId'],
+      depositSource: json['depositSource'],
+      withdrawalDestination: json['withdrawalDestination'],
+      mobileProvider: json['mobileProvider'],
+      mobileMoneyNumber: json['mobileMoneyNumber'],
+      transferRecipient: json['transferRecipient'],
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'amount': amount,
+      'date': date.toIso8601String(),
+      'type': type.toString().split('.').last,
+      'description': description,
+      'userId': userId,
+      'goalId': goalId,
+      'depositSource': depositSource,
+      'withdrawalDestination': withdrawalDestination,
+      'mobileProvider': mobileProvider,
+      'mobileMoneyNumber': mobileMoneyNumber,
+      'transferRecipient': transferRecipient,
+    };
+  }
+
+  static TransactionType _parseTransactionType(String? typeStr) {
+    if (typeStr == 'deposit') return TransactionType.deposit;
+    if (typeStr == 'withdrawal') return TransactionType.withdrawal;
+    if (typeStr == 'transfer') return TransactionType.transfer;
+    return TransactionType.deposit; // Default
+  }
+}
 
 class TransactionScreen extends StatefulWidget {
-  const TransactionScreen({super.key});
+  final String userId;
+  final String? goalId;
+  final double currentBalance;
+  
+  const TransactionScreen({
+    super.key, 
+    required this.userId,
+    this.goalId,
+    required this.currentBalance,
+  });
 
   @override
   // ignore: library_private_types_in_public_api
@@ -11,14 +96,13 @@ class TransactionScreen extends StatefulWidget {
 
 class _TransactionScreenState extends State<TransactionScreen> {
   final _formKey = GlobalKey<FormState>();
-  int _amount = 0;  
+  double _amount = 0;
   // ignore: unused_field
   String _description = '';
-  String _transactionType = 'deposit'; // Changed to string for three options
+  TransactionType _transactionType = TransactionType.deposit;
   String _depositSource = 'mobile_money'; // Default deposit source
   String _withdrawalDestination = 'mobile_money'; // Default withdrawal destination
   String _mobileProvider = ''; // MTN or Airtel
-  final int _currentBalance = 100000; 
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
@@ -26,7 +110,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
   final TextEditingController _withdrawalMobileNumberController = TextEditingController();
   
   final NumberFormat currencyFormat = NumberFormat('#,###');
-  final Color customGreen = const Color(0xFF8EB55D); // Updated custom green color
+  final Color customGreen = const Color(0xFF8EB55D); // Custom green color
   
   String _alertMessage = '';
   bool _showAlert = false;
@@ -55,22 +139,21 @@ class _TransactionScreenState extends State<TransactionScreen> {
                 const SizedBox(height: 20),
                 _buildAmountInput(),
                 const SizedBox(height: 20),
-                if (_transactionType == 'transfer')
+                if (_transactionType == TransactionType.transfer)
                   _buildPhoneInput(),
-                if (_transactionType == 'deposit')
+                if (_transactionType == TransactionType.deposit)
                   _buildDepositSourceInput(),
-                if (_transactionType == 'withdraw')
+                if (_transactionType == TransactionType.withdrawal)
                   _buildWithdrawalDestinationInput(),
-                if (_transactionType == 'deposit' && _depositSource == 'mobile_money')
+                if (_transactionType == TransactionType.deposit && _depositSource == 'mobile_money')
                   _buildMobileProviderInput(),
-                if (_transactionType == 'withdraw' && _withdrawalDestination == 'mobile_money')
+                if (_transactionType == TransactionType.withdrawal && _withdrawalDestination == 'mobile_money')
                   _buildWithdrawalMobileProviderInput(),
-                if (_transactionType == 'deposit' && _depositSource == 'mobile_money' && _mobileProvider.isNotEmpty)
+                if (_transactionType == TransactionType.deposit && _depositSource == 'mobile_money' && _mobileProvider.isNotEmpty)
                   _buildMobileNumberInput(),
-                if (_transactionType == 'withdraw' && _withdrawalDestination == 'mobile_money' && _mobileProvider.isNotEmpty)
+                if (_transactionType == TransactionType.withdrawal && _withdrawalDestination == 'mobile_money' && _mobileProvider.isNotEmpty)
                   _buildWithdrawalMobileNumberInput(),
-                if (_transactionType == 'transfer' || _transactionType == 'deposit' || _transactionType == 'withdraw')
-                  const SizedBox(height: 20),
+                const SizedBox(height: 20),
                 _buildDescriptionInput(),
                 const SizedBox(height: 20),
                 _buildDateCard(),
@@ -97,7 +180,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              'UGX ${currencyFormat.format(_currentBalance)}',
+              'UGX ${currencyFormat.format(widget.currentBalance)}',
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
           ],
@@ -114,18 +197,18 @@ class _TransactionScreenState extends State<TransactionScreen> {
           children: [
             Expanded(
               child: GestureDetector(
-                onTap: () => setState(() => _transactionType = 'deposit'),
+                onTap: () => setState(() => _transactionType = TransactionType.deposit),
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: _transactionType == 'deposit' ? customGreen : Colors.grey[200],
+                    color: _transactionType == TransactionType.deposit ? customGreen : Colors.grey[200],
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     'Deposit',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: _transactionType == 'deposit' ? Colors.white : Colors.black,
+                      color: _transactionType == TransactionType.deposit ? Colors.white : Colors.black,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -135,18 +218,18 @@ class _TransactionScreenState extends State<TransactionScreen> {
             const SizedBox(width: 4),
             Expanded(
               child: GestureDetector(
-                onTap: () => setState(() => _transactionType = 'withdraw'),
+                onTap: () => setState(() => _transactionType = TransactionType.withdrawal),
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: _transactionType == 'withdraw' ? customGreen : Colors.grey[200],
+                    color: _transactionType == TransactionType.withdrawal ? customGreen : Colors.grey[200],
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     'Withdraw',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: _transactionType == 'withdraw' ? Colors.white : Colors.black,
+                      color: _transactionType == TransactionType.withdrawal ? Colors.white : Colors.black,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -156,18 +239,18 @@ class _TransactionScreenState extends State<TransactionScreen> {
             const SizedBox(width: 4),
             Expanded(
               child: GestureDetector(
-                onTap: () => setState(() => _transactionType = 'transfer'),
+                onTap: () => setState(() => _transactionType = TransactionType.transfer),
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: _transactionType == 'transfer' ? customGreen : Colors.grey[200],
+                    color: _transactionType == TransactionType.transfer ? customGreen : Colors.grey[200],
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     'Transfer',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: _transactionType == 'transfer' ? Colors.white : Colors.black,
+                      color: _transactionType == TransactionType.transfer ? Colors.white : Colors.black,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -524,7 +607,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                 ),
               ),
               validator: (value) {
-                if (_transactionType == 'deposit' && _depositSource == 'mobile_money' && 
+                if (_transactionType == TransactionType.deposit && _depositSource == 'mobile_money' && 
                     _mobileProvider.isNotEmpty && (value == null || value.isEmpty)) {
                   return 'Please enter a mobile money number';
                 }
@@ -577,7 +660,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                 ),
               ),
               validator: (value) {
-                if (_transactionType == 'withdraw' && _withdrawalDestination == 'mobile_money' && 
+                if (_transactionType == TransactionType.withdrawal && _withdrawalDestination == 'mobile_money' && 
                     _mobileProvider.isNotEmpty && (value == null || value.isEmpty)) {
                   return 'Please enter a mobile money number';
                 }
@@ -630,11 +713,11 @@ class _TransactionScreenState extends State<TransactionScreen> {
                   return 'Please enter an amount';
                 }
                 try {
-                  int amount = int.parse(value.replaceAll(',', ''));
+                  double amount = double.parse(value.replaceAll(',', ''));
                   if (amount <= 0) {
                     return 'Amount must be greater than 0';
                   }
-                  if ((_transactionType == 'withdraw' || _transactionType == 'transfer') && amount > _currentBalance) {
+                  if ((_transactionType == TransactionType.withdrawal || _transactionType == TransactionType.transfer) && amount > widget.currentBalance) {
                     return 'Insufficient balance';
                   }
                 } catch (e) {
@@ -646,7 +729,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                 String numericValue = value.replaceAll(',', '');
                 if (numericValue.isNotEmpty) {
                   setState(() {
-                    _amount = int.tryParse(numericValue) ?? 0;
+                    _amount = double.tryParse(numericValue) ?? 0;
                     String formatted = currencyFormat.format(_amount);
                     _amountController.value = TextEditingValue(
                       text: formatted,
@@ -694,7 +777,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                 suffixIcon: Icon(Icons.phone),
               ),
               validator: (value) {
-                if (_transactionType == 'transfer' && (value == null || value.isEmpty)) {
+                if (_transactionType == TransactionType.transfer && (value == null || value.isEmpty)) {
                   return 'Please enter a phone number';
                 }
                 return null;
@@ -770,19 +853,34 @@ class _TransactionScreenState extends State<TransactionScreen> {
 
   void _processTransaction() {
     if (_formKey.currentState!.validate()) {
+      // Create a transaction model
+      final TransactionModel transaction = TransactionModel(
+        id: const Uuid().v4(), // Generate a unique ID
+        amount: _amount,
+        date: DateTime.now(),
+        type: _transactionType,
+        description: _descriptionController.text,
+        userId: widget.userId,
+        goalId: widget.goalId,
+        depositSource: _transactionType == TransactionType.deposit ? _depositSource : null,
+        withdrawalDestination: _transactionType == TransactionType.withdrawal ? _withdrawalDestination : null,
+        mobileProvider: (_depositSource == 'mobile_money' || _withdrawalDestination == 'mobile_money') ? _mobileProvider : null,
+        mobileMoneyNumber: _depositSource == 'mobile_money' && _mobileProvider.isNotEmpty ? 
+            _mobileMoneyNumberController.text : null,
+        transferRecipient: _transactionType == TransactionType.transfer ? _phoneController.text : null,
+      );
+
       String buttonText;
       switch (_transactionType) {
-        case 'deposit':
+        case TransactionType.deposit:
           buttonText = 'Deposit';
           break;
-        case 'withdraw':
+        case TransactionType.withdrawal:
           buttonText = 'Withdrawal';
           break;
-        case 'transfer':
+        case TransactionType.transfer:
           buttonText = 'Transfer';
           break;
-        default:
-          buttonText = 'Transaction';
       }
       
       // Show the alert in the app bar
@@ -794,20 +892,10 @@ class _TransactionScreenState extends State<TransactionScreen> {
       // Wait briefly to show the success message before navigating back
       Future.delayed(const Duration(seconds: 1), () {
         if (mounted) {
-          // Navigate back to home screen with a success result
+          // Navigate back to home screen with the transaction model
           Navigator.of(context).pop({
             'success': true,
-            'type': _transactionType,
-            'amount': _amount,
-            'phone': _transactionType == 'transfer' ? _phoneController.text : '',
-            'depositSource': _transactionType == 'deposit' ? _depositSource : '',
-            'withdrawalDestination': _transactionType == 'withdraw' ? _withdrawalDestination : '',
-            'mobileProvider': (_depositSource == 'mobile_money' || _withdrawalDestination == 'mobile_money') ? _mobileProvider : '',
-            'mobileMoneyNumber': _depositSource == 'mobile_money' && _mobileProvider.isNotEmpty ? 
-                _mobileMoneyNumberController.text : '',
-            'withdrawalMobileNumber': _withdrawalDestination == 'mobile_money' && _mobileProvider.isNotEmpty ? 
-                _withdrawalMobileNumberController.text : '',
-            'description': _description,
+            'transaction': transaction.toJson(),
           });
         }
       });
@@ -817,45 +905,63 @@ class _TransactionScreenState extends State<TransactionScreen> {
   Widget _buildSubmitButton() {
     String buttonText;
     switch (_transactionType) {
-      case 'deposit':
+      case TransactionType.deposit:
         buttonText = 'Save';
         break;
-      case 'withdraw':
+      case TransactionType.withdrawal:
         buttonText = 'Withdraw';
         break;
-      case 'transfer':
+      case TransactionType.transfer:
         buttonText = 'Transfer';
         break;
-      default:
-        buttonText = 'Save';
     }
-
+    
     return ElevatedButton(
       onPressed: _processTransaction,
       style: ElevatedButton.styleFrom(
-        padding: const EdgeInsets.symmetric(vertical: 16),
         backgroundColor: customGreen,
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
       ),
       child: Text(
-        '$buttonText UGX ${currencyFormat.format(_amount)}',
-        style: const TextStyle(fontSize: 18, color: Colors.white),
+        buttonText,
+        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
       ),
     );
   }
 
-  Widget _quickAmountButton(int amount) {
-    return OutlinedButton(
+  Widget _quickAmountButton(double amount) {
+    return ElevatedButton(
       onPressed: () {
         setState(() {
           _amount = amount;
           _amountController.text = currencyFormat.format(amount);
         });
       },
-      // ignore: sort_child_properties_last
-      child: Text(currencyFormat.format(amount)),
-      style: OutlinedButton.styleFrom(
-        side: BorderSide(color: customGreen),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.grey[200],
+        foregroundColor: Colors.black87,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+      child: Text(
+        'UGX ${currencyFormat.format(amount)}',
+        style: const TextStyle(fontSize: 12),
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _amountController.dispose();
+    _descriptionController.dispose();
+    _phoneController.dispose();
+    _mobileMoneyNumberController.dispose();
+    _withdrawalMobileNumberController.dispose();
+    super.dispose();
   }
 }

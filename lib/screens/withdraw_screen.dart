@@ -14,12 +14,15 @@ class WithdrawScreen extends StatefulWidget {
 class _WithdrawScreenState extends State<WithdrawScreen> {
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
+  final TextEditingController _phoneNumberController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   double _currentBalance = 0;
   bool _isLoading = false;
   final String _userId = "user_main"; // This would come from your auth system
   // ignore: unused_field
   final Uuid _uuid = Uuid();
+  String _selectedDestinationType = 'Mobile Money'; // Default value
+  final List<String> _destinationTypes = ['Mobile Money', 'Bank Account', 'Cash'];
 
   @override
   void initState() {
@@ -55,16 +58,30 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
     try {
       final amount = double.parse(_amountController.text.replaceAll(',', ''));
       final description = _descriptionController.text.trim();
+      final phoneNumber = _phoneNumberController.text.trim();
+      final destinationType = _selectedDestinationType;
 
       await TransactionService.addWithdrawal(
         amount,
         description.isNotEmpty ? description : "Withdrawal",
         _userId,
+        phoneNumber,
+        destinationType,
       );
 
       // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Withdrawal successful!')),
+        SnackBar(
+          content: const Text('Withdrawal successful!'),
+          backgroundColor: Colors.green,  // Green background
+          behavior: SnackBarBehavior.floating,  // Makes it floating
+          margin: EdgeInsets.only(
+            // ignore: use_build_context_synchronously
+            bottom: MediaQuery.of(context).size.height - 100, 
+            right: 20, 
+            left: 20
+          ),  // Positions near top
+        ),
       );
 
       // ignore: use_build_context_synchronously
@@ -72,7 +89,17 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
     } catch (e) {
       // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
+        SnackBar(
+          content: Text('Error: $e'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(
+            // ignore: use_build_context_synchronously
+            bottom: MediaQuery.of(context).size.height - 100, 
+            right: 20, 
+            left: 20
+          ),
+        ),
       );
       setState(() {
         _isLoading = false;
@@ -149,6 +176,47 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                       },
                     ),
                     const SizedBox(height: 20),
+                    DropdownButtonFormField<String>(
+                      value: _selectedDestinationType,
+                      decoration: InputDecoration(
+                        labelText: 'Withdrawal Method',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      items: _destinationTypes.map((String destination) {
+                        return DropdownMenuItem<String>(
+                          value: destination,
+                          child: Text(destination),
+                        );
+                      }).toList(),
+                      onChanged: (String? newValue) {
+                        setState(() {
+                          _selectedDestinationType = newValue!;
+                        });
+                      },
+                      validator: (value) => value == null ? 'Please select a destination type' : null,
+                    ),
+                    const SizedBox(height: 20),
+                    TextFormField(
+                      controller: _phoneNumberController,
+                      keyboardType: TextInputType.phone,
+                      decoration: InputDecoration(
+                        labelText: 'Phone Number',
+                        hintText: 'e.g. 0750123456',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter a phone number';
+                        }
+                        // Add more validation as needed for phone numbers
+                        return null;
+                      },
+                    ),
+                    const SizedBox(height: 20),
                     TextFormField(
                       controller: _descriptionController,
                       decoration: InputDecoration(
@@ -156,7 +224,7 @@ class _WithdrawScreenState extends State<WithdrawScreen> {
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(10),
                         ),
-                        hintText: 'e.g. John Doe or Groceries',
+                        hintText: 'e.g. Groceries, education, businesss',
                       ),
                       maxLines: 2,
                     ),

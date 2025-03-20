@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:savesmart_app/screens/saving_goals_screen.dart';
-import 'transaction_screen.dart';
+import 'transaction_screen.dart' as screen;
 import 'withdraw_screen.dart';
 import 'analytics_screen.dart';
 import 'profile_information_screen.dart';
@@ -241,7 +241,12 @@ class _HomeScreenState extends State<HomeScreen> {
           } else if (index == 2) {
             final result = await Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const TransactionScreen()),
+              MaterialPageRoute(
+                builder: (context) => screen.TransactionScreen(
+                  userId: _userId,
+                  currentBalance: _walletBalance,
+                ),
+              ),
             );
             if (result == true) {
               _loadData(); // Refresh data if transaction was made
@@ -407,7 +412,12 @@ class _HomeScreenState extends State<HomeScreen> {
               onPressed: () async {
                 final result = await Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => const TransactionScreen()),
+                  MaterialPageRoute(
+                    builder: (context) => screen.TransactionScreen(
+                      userId: _userId,
+                      currentBalance: _walletBalance,
+                    ),
+                  ),
                 );
                 if (result == true) {
                   _loadData();
