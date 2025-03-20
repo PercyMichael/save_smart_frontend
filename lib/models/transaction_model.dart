@@ -23,9 +23,8 @@ class TransactionModel {
     return TransactionModel(
       id: json['id'] ?? '',
       amount: (json['amount'] ?? 0.0).toDouble(),
-      date: json['date'] != null 
-          ? DateTime.parse(json['date']) 
-          : DateTime.now(),
+      date:
+          json['date'] != null ? DateTime.parse(json['date']) : DateTime.now(),
       type: _parseTransactionType(json['type']),
       description: json['description'] ?? '',
       userId: json['userId'] ?? '',

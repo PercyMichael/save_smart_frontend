@@ -2,192 +2,252 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:savesmart_app/screens/saving_goals_screen.dart';
 import 'transaction_screen.dart';
-// ignore: unused_import
-import 'save_screen.dart';
 import 'withdraw_screen.dart';
 import 'analytics_screen.dart';
-import 'profile_screen.dart';
+import 'profile_information_screen.dart';
 import 'notification_center.dart';
 import 'settings_screen.dart';
+import 'package:savesmart_app/models/transaction_model.dart';
+import 'package:savesmart_app/services/transaction_service.dart';
 
-class HomeScreen extends StatelessWidget {
+class HomeScreen extends StatefulWidget {
+  const HomeScreen({super.key});
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> {
   final currencyFormat = NumberFormat.currency(
     symbol: 'UGX ',
     decimalDigits: 0,
   );
 
   final Color customGreen = const Color(0xFF8EB55D);
+  bool _isBalanceVisible = true;
+  double _walletBalance = 0;
+  List<TransactionModel> _recentTransactions = [];
+  bool _isLoading = true;
+  // ignore: unused_field
+  final String _userId = "user_main"; // This would come from your auth system
 
-  HomeScreen({super.key});
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      // Initialize sample data if it's the first run
+      await TransactionService.initializeWithSampleData();
+      
+      // Get balance and transactions from the transaction service
+      _walletBalance = await TransactionService.getWalletBalance();
+      _recentTransactions = await TransactionService.getRecentTransactions(5); // Get last 5 transactions
+    } catch (e) {
+      // Handle any errors
+      debugPrint('Error loading data: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: customGreen,
-                  borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(30),
-                    bottomRight: Radius.circular(30),
-                  ),
-                ),
+      body: RefreshIndicator(
+        onRefresh: _loadData,
+        child: SafeArea(
+          child: _isLoading 
+            ? const Center(child: CircularProgressIndicator())
+            : SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
                 child: Column(
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        CircleAvatar(
-                          // ignore: deprecated_member_use
-                          backgroundColor: Colors.white.withOpacity(0.2),
-                          child: IconButton(
-                            icon: const Icon(Icons.person, color: Colors.white),
-                            onPressed: () {
-                              // Navigate to the ProfileScreen when person icon is tapped
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (context) => const ProfileInformationScreen()),
-                              );
-                            },
-                          ),
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: customGreen,
+                        borderRadius: const BorderRadius.only(
+                          bottomLeft: Radius.circular(30),
+                          bottomRight: Radius.circular(30),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.notifications, color: Colors.white),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const NotificationCenter()),
-                            );
-                          },
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    Column(
-                      children: [
-                        Text(
-                          'Hello,',
-                          style: TextStyle(
-                            // ignore: deprecated_member_use
-                            color: Colors.white.withOpacity(0.9), // Increased opacity for better contrast
-                            fontSize: 18, // Increased from 16
-                          ),
-                        ),
-                        Text(
-                          'Mukasa John',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 26, // Increased from 24
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 24), // Increased spacing
-                        const Text(
-                          'Wallet Balance',
-                          style: TextStyle(
-                            color: Colors.white, // Increased opacity from white70
-                            fontSize: 18, // Increased from 16
-                            fontWeight: FontWeight.w500, // Added medium weight
-                          ),
-                        ),
-                        const SizedBox(height: 10), // Increased spacing
-                        Text(
-                          currencyFormat.format(58095 * 3700),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 36, // Increased from 32
-                            fontWeight: FontWeight.bold,
-                            letterSpacing: 0.5, // Added letter spacing for better readability
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
-                      children: [
-                        _buildStylishActionButton(
-                          context, 
-                          Icons.money_off, 
-                          'Withdraw',
-                          const Color(0xFFF5F5F5),
-                          customGreen, 
-                          () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const WithdrawScreen()),
-                            );
-                          }
-                        ),
-                        _buildStylishActionButton(
-                          context, 
-                          Icons.add, 
-                          'Save',
-                          customGreen,
-                          Colors.white, 
-                          () {
-                            // Modified navigation - Go to SavingsGoalsScreen first with selection mode
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => SavingsGoalScreen(),
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              CircleAvatar(
+                                // ignore: deprecated_member_use
+                                backgroundColor: Colors.white.withOpacity(0.2),
+                                child: IconButton(
+                                  icon: const Icon(Icons.person, color: Colors.white),
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(builder: (context) => const ProfileInformationScreen()),
+                                    );
+                                  },
+                                ),
                               ),
-                            );
-                          }
-                        ),
-                      ],
+                              const Text(
+                                'Hello, Mukasa',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.notifications, color: Colors.white),
+                                onPressed: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => const NotificationCenter()),
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 24),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Text(
+                                'Wallet Balance',
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              IconButton(
+                                icon: Icon(
+                                  _isBalanceVisible ? Icons.visibility : Icons.visibility_off,
+                                  color: Colors.white,
+                                  size: 22,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _isBalanceVisible = !_isBalanceVisible;
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            _isBalanceVisible 
+                                ? currencyFormat.format(_walletBalance)
+                                : '•••••••••',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 36,
+                              fontWeight: FontWeight.bold,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 30),
-                    _buildAnalyticsCard(context),
-                    const SizedBox(height: 20),
-                    _buildTransactionsList(),
+                    Padding(
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              _buildStylishActionButton(
+                                context, 
+                                Icons.money_off, 
+                                'Withdraw',
+                                const Color(0xFFF5F5F5),
+                                customGreen, 
+                                () async {
+                                  final result = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(builder: (context) => const WithdrawScreen()),
+                                  );
+                                  if (result == true) {
+                                    _loadData(); // Refresh data if transaction was successful
+                                  }
+                                }
+                              ),
+                              _buildStylishActionButton(
+                                context, 
+                                Icons.add, 
+                                'Save',
+                                customGreen,
+                                Colors.white, 
+                                () async {
+                                  final result = await Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => SavingGoalsScreen(),
+                                    ),
+                                  );
+                                  if (result == true) {
+                                    _loadData(); // Refresh data if transaction was successful
+                                  }
+                                }
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 30),
+                          _buildAnalyticsCard(context),
+                          const SizedBox(height: 20),
+                          _buildTransactionsList(),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               ),
-            ],
-          ),
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
-        selectedItemColor: customGreen, // Keeping the selected color as customGreen
-        unselectedItemColor: Colors.grey.shade600, // Darker grey for better contrast
+        selectedItemColor: customGreen,
+        unselectedItemColor: Colors.grey.shade600,
         currentIndex: 0,
         type: BottomNavigationBarType.fixed,
-        elevation: 15, // Increased elevation for better visual prominence
+        elevation: 15,
         backgroundColor: Colors.white,
         selectedLabelStyle: const TextStyle(
-          fontWeight: FontWeight.w600, // Bolder text for selected item
-          fontSize: 13, // Slightly larger font
+          fontWeight: FontWeight.w600,
+          fontSize: 13,
         ),
         unselectedLabelStyle: const TextStyle(
-          fontSize: 12, // Slightly larger than default
+          fontSize: 12,
         ),
-        iconSize: 26, // Larger icons for better visibility
-        onTap: (index) {
+        iconSize: 26,
+        onTap: (index) async {
           if (index == 1) {
-            Navigator.push(
+            await Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const AnalyticsScreen()),
             );
+            _loadData(); // Refresh data when returning from Analytics
           } else if (index == 2) {
-            Navigator.push(
+            final result = await Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const TransactionScreen()),
             );
+            if (result == true) {
+              _loadData(); // Refresh data if transaction was made
+            }
           } else if (index == 3) {
-            // Navigate to the Settings screen when Settings tab is tapped
-            Navigator.push(
+            await Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const SettingsScreen()),
             );
@@ -250,9 +310,9 @@ class HomeScreen extends StatelessWidget {
               label,
               style: TextStyle(
                 color: iconColor,
-                fontSize: 17, // Increased from 16
+                fontSize: 17,
                 fontWeight: FontWeight.w600,
-                letterSpacing: 0.5, // Added letter spacing
+                letterSpacing: 0.5,
               ),
             ),
           ],
@@ -263,11 +323,12 @@ class HomeScreen extends StatelessWidget {
 
   Widget _buildAnalyticsCard(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        Navigator.push(
+      onTap: () async {
+        await Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const AnalyticsScreen()),
         );
+        _loadData(); // Refresh data when returning from Analytics
       },
       child: Container(
         padding: const EdgeInsets.all(15),
@@ -297,11 +358,11 @@ class HomeScreen extends StatelessWidget {
             const SizedBox(width: 15),
             Expanded(
               child: Text(
-                "Let's take a look at your financial overview for October!",
+                "Let's take a look at your financial overview for ${DateFormat('MMMM').format(DateTime.now())}!",
                 style: TextStyle(
-                  fontSize: 15, // Increased from 14
+                  fontSize: 15,
                   fontWeight: FontWeight.w500,
-                  color: Colors.black87, // Darker text color
+                  color: Colors.black87,
                 ),
               ),
             ),
@@ -313,6 +374,21 @@ class HomeScreen extends StatelessWidget {
   }
 
   Widget _buildTransactionsList() {
+    if (_recentTransactions.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(20.0),
+          child: Text(
+            'No recent transactions',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey,
+            ),
+          ),
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -322,32 +398,75 @@ class HomeScreen extends StatelessWidget {
             const Text(
               'Transaction history',
               style: TextStyle(
-                fontSize: 18, // Increased from 16
+                fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.black87, // Ensure good contrast
+                color: Colors.black87,
               ),
             ),
             TextButton(
-              onPressed: () {},
+              onPressed: () async {
+                final result = await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => const TransactionScreen()),
+                );
+                if (result == true) {
+                  _loadData();
+                }
+              },
               child: Text(
                 'See All',
                 style: TextStyle(
                   color: customGreen,
-                  fontSize: 15, // Increased size
+                  fontSize: 15,
                   fontWeight: FontWeight.w500,
                 ),
               ),
             ),
           ],
         ),
-        _buildTransactionItem('Paul Yiga ', 'Save', 50000, true, DateTime.now()),
-        _buildTransactionItem('Jane Babirye ', 'Withdraw', 20000, false, DateTime.now().subtract(const Duration(hours: 4))),
-        _buildTransactionItem('Samuel Okello', 'Save', 10000, true, DateTime.now().subtract(const Duration(days: 1))),
+        ..._recentTransactions.map((transaction) => 
+          _buildTransactionItem(transaction)
+        // ignore: unnecessary_to_list_in_spreads
+        ).toList(),
       ],
     );
   }
 
-  Widget _buildTransactionItem(String name, String type, double amount, bool isCredit, DateTime date) {
+  Widget _buildTransactionItem(TransactionModel transaction) {
+    // Extract first name from description or use a default
+    String firstNameOrInitial = '';
+    if (transaction.description.isNotEmpty) {
+      // Try to extract a name from the description
+      final nameParts = transaction.description.split(' ');
+      if (nameParts.isNotEmpty) {
+        firstNameOrInitial = nameParts[0];
+      }
+    }
+    
+    // If we couldn't get a name, use 'User'
+    if (firstNameOrInitial.isEmpty) {
+      firstNameOrInitial = 'User';
+    }
+    
+    // Get transaction type display name
+    String typeDisplayName = '';
+    bool isCredit = false;
+    
+    switch (transaction.type) {
+      case TransactionType.deposit:
+        typeDisplayName = 'Save';
+        isCredit = true;
+        break;
+      case TransactionType.withdrawal:
+        typeDisplayName = 'Withdraw';
+        isCredit = false;
+        break;
+      case TransactionType.transfer:
+        typeDisplayName = 'Transfer';
+        isCredit = false; // You might need to determine this based on other factors
+        break;
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 12),
       decoration: BoxDecoration(
@@ -360,10 +479,10 @@ class HomeScreen extends StatelessWidget {
           CircleAvatar(
             backgroundColor: Colors.grey[200],
             child: Text(
-              name[0],
+              firstNameOrInitial.isNotEmpty ? firstNameOrInitial[0].toUpperCase() : 'U',
               style: TextStyle(
                 color: customGreen,
-                fontSize: 16, // Added size for better visibility
+                fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -374,29 +493,41 @@ class HomeScreen extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  name,
+                  firstNameOrInitial,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
-                    fontSize: 15, // Increased size
-                    color: Colors.black87, // Darker text color
+                    fontSize: 15,
+                    color: Colors.black87,
                   ),
                 ),
-                Text(
-                  type,
-                  style: TextStyle(
-                    color: Colors.grey[700], // Darker than original grey[600]
-                    fontSize: 13, // Increased from 12
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      typeDisplayName,
+                      style: TextStyle(
+                        color: Colors.grey[700],
+                        fontSize: 13,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      DateFormat('MMM d, h:mm a').format(transaction.date),
+                      style: TextStyle(
+                        color: Colors.grey[500],
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
           ),
           Text(
-            '${isCredit ? '+' : '-'} UGX ${amount.toInt()}',
+            '${isCredit ? '+' : '-'} ${currencyFormat.format(transaction.amount).trim()}',
             style: TextStyle(
               color: isCredit ? customGreen : Colors.redAccent,
               fontWeight: FontWeight.bold,
-              fontSize: 15, // Added size for better visibility
+              fontSize: 15,
             ),
           ),
         ],

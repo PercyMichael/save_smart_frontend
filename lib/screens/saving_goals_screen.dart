@@ -3,16 +3,19 @@ import 'package:intl/intl.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
 import 'save_screen.dart';  // Import the SaveScreen
 
-class SavingsGoalScreen extends StatefulWidget {
+// Define the custom color as a constant for consistency
+const Color customGreen = Color(0xFF8EB55D);
+
+class SavingGoalsScreen extends StatefulWidget {
   // ignore: use_super_parameters
-  const SavingsGoalScreen({Key? key}) : super(key: key);
+  const SavingGoalsScreen({Key? key}) : super(key: key);
 
   @override
   // ignore: library_private_types_in_public_api
   _SavingsGoalScreenState createState() => _SavingsGoalScreenState();
 }
 
-class _SavingsGoalScreenState extends State<SavingsGoalScreen> {
+class _SavingsGoalScreenState extends State<SavingGoalsScreen> {
   final _formKey = GlobalKey<FormState>();
   
   // Controllers
@@ -56,10 +59,13 @@ class _SavingsGoalScreenState extends State<SavingsGoalScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Create Savings Goal'),
-        backgroundColor: Colors.green,
+        title: const Text(
+          'Create Savings Goal',
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+        ),
+        backgroundColor: customGreen,
         actions: [
-          // Skip button in the app bar
+          // Redesigned Skip button in the app bar
           TextButton(
             onPressed: () {
               // Navigate to SaveScreen with default values
@@ -67,10 +73,15 @@ class _SavingsGoalScreenState extends State<SavingsGoalScreen> {
             },
             child: const Text(
               'Skip',
-              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              style: TextStyle(
+                color: Colors.white, 
+                fontWeight: FontWeight.w500,
+                fontSize: 15,
+              ),
             ),
           ),
         ],
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -262,7 +273,7 @@ class _SavingsGoalScreenState extends State<SavingsGoalScreen> {
               TextFormField(
                 controller: _contributionAmountController,
                 decoration: InputDecoration(
-                  labelText: 'Contribution Amount (UGX)',
+                  labelText: 'Deposit Amount (UGX)',
                   border: const OutlineInputBorder(),
                   prefixIcon: const Icon(Icons.add_card),
                   helperText: 'How much will you save $_selectedFrequency in Ugandan Shillings?',
@@ -304,8 +315,10 @@ class _SavingsGoalScreenState extends State<SavingsGoalScreen> {
                       Expanded(
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
+                            backgroundColor: customGreen,
+                            foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
+                            elevation: 2,
                           ),
                           onPressed: () {
                             if (_formKey.currentState!.validate()) {
@@ -328,7 +341,9 @@ class _SavingsGoalScreenState extends State<SavingsGoalScreen> {
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
                             backgroundColor: Colors.blue,
+                            foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
+                            elevation: 2,
                           ),
                           onPressed: () {
                             if (_formKey.currentState!.validate()) {
@@ -345,7 +360,7 @@ class _SavingsGoalScreenState extends State<SavingsGoalScreen> {
                     ],
                   ),
                   
-                  // Skip button below main buttons
+                  // Redesigned Skip button
                   const SizedBox(height: 16),
                   TextButton(
                     onPressed: () {
@@ -354,9 +369,10 @@ class _SavingsGoalScreenState extends State<SavingsGoalScreen> {
                     },
                     style: TextButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
+                      foregroundColor: customGreen,
                     ),
                     child: const Text(
-                      'Skip for now',
+                      'Continue without creating a goal',
                       style: TextStyle(fontSize: 16),
                     ),
                   ),
@@ -373,7 +389,10 @@ class _SavingsGoalScreenState extends State<SavingsGoalScreen> {
   void _saveGoal(BuildContext context) {
     // Here you would save the goal data to your database
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Savings goal created successfully!')),
+      const SnackBar(
+        content: Text('Savings goal created successfully!'),
+        backgroundColor: customGreen,
+      ),
     );
   }
   
@@ -427,7 +446,10 @@ class _SavingsGoalScreenState extends State<SavingsGoalScreen> {
     
     // Show feedback that we're skipping
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Proceeding to save without creating a goal')),
+      const SnackBar(
+        content: Text('Proceeding to save without creating a goal'),
+        backgroundColor: customGreen,
+      ),
     );
     
     // Navigate to SaveScreen with default data
@@ -483,8 +505,8 @@ class _SavingsGoalScreenState extends State<SavingsGoalScreen> {
                   const Text('Complete')
                 ],
               ),
-              progressColor: Colors.green,
-              backgroundColor: Colors.green.shade100,
+              progressColor: customGreen,
+              backgroundColor: Color(0xFFD8E6C3), // Lighter shade of customGreen
               animation: true,
               animationDuration: 1000,
             ),

@@ -138,6 +138,9 @@ class _SaveScreenState extends State<SaveScreen> {
                 Navigator.pop(context);
                 _processDeposit(context);
               },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF8EB55D), // Your green color
+              ),
               child: const Text('Confirm'),
             ),
           ],
@@ -147,68 +150,56 @@ class _SaveScreenState extends State<SaveScreen> {
   }
 
   void _processDeposit(BuildContext context) {
+    // Show saving process started at the top
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Saving process started...')),
+      SnackBar(
+        content: const Text('Saving process started...'),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: const Color(0xFF8EB55D), // Your green color
+        margin: const EdgeInsets.fromLTRB(16, 50, 16, 0), // Position at top
+      ),
     );
+    
     // Simulate processing time
-  Future.delayed(const Duration(seconds: 1), () {
-    // Show success dialog
-    showDialog(
-      // ignore: use_build_context_synchronously
-      context: context,
-      barrierDismissible: false,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Success!'),
-          content: const Text('Your money has been saved successfully.'),
-          actions: [
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context); // Close dialog
-                Navigator.of(context).popUntil((route) => route.isFirst); // Go to home
-              },
-              child: const Text('Back to Home'),
-            ),
-          ],
-        );
-      },
-    );
-  });
+    Future.delayed(const Duration(seconds: 1), () {
+      // Show success dialog
+      showDialog(
+        // ignore: use_build_context_synchronously
+        context: context,
+        barrierDismissible: false,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('Success!'),
+            content: const Text('Your money has been saved successfully.'),
+            actions: [
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context); // Close dialog
+                  // More robust navigation to home screen
+                  Navigator.of(context).popUntil((route) => route.isFirst); 
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF8EB55D), // Your green color
+                ),
+                child: const Text('Back to Home'),
+              ),
+            ],
+          );
+        },
+      );
+    });
     // Here, you can add API integration for deposit processing
-  }
-  // ignore: unused_element
-  void _showSavingsGoalDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Set Savings Goal'),
-          content: const Text(
-              'Would you like to set a savings goal for this amount?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('No'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.pop(context);
-                // Implement goal setting logic
-              },
-              child: const Text('Yes'),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Save Money'),
-        backgroundColor: Colors.green,
+        title: const Text(
+          'Save Money',
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: const Color(0xFF8EB55D), // Updated to your green color
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -300,7 +291,7 @@ class _SaveScreenState extends State<SaveScreen> {
               if (_selectedSource == 'Mobile Money') ...[
                 DropdownButtonFormField<String>(
                   decoration: const InputDecoration(
-                    labelText: 'Mobile Money Provider',
+                    labelText: 'Service Provider',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.phone_android),
                   ),
@@ -353,7 +344,7 @@ class _SaveScreenState extends State<SaveScreen> {
               // Account dropdown
               DropdownButtonFormField<String>(
                 decoration: const InputDecoration(
-                  labelText: 'Save To',
+                  labelText: 'Save Category',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.savings),
                 ),
@@ -408,48 +399,12 @@ class _SaveScreenState extends State<SaveScreen> {
                     : null,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.all(16),
-                  backgroundColor: _formIsValid ? Colors.green : null,
+                  backgroundColor: _formIsValid ? const Color(0xFF8EB55D) : null, // Updated to your green color
                   disabledBackgroundColor: Colors.grey.shade300,
                 ),
                 child: Text(
                   'Save ${_amountController.text.isNotEmpty ? currencyFormatter.format(double.parse(_amountController.text)) : ""}',
                   style: const TextStyle(fontSize: 16, color: Colors.white),
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // Success message area for feedback after saving
-              Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Column(
-                  children: [
-                    const Text(
-                      'Thank you for saving!',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.green,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Your contribution helps you get closer to your goals.',
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    OutlinedButton.icon(
-                      onPressed: () {
-                        Navigator.pop(context); // Return to previous screen
-                      },
-                      icon: const Icon(Icons.arrow_back),
-                      label: const Text('Back to Goals'),
-                    ),
-                  ],
                 ),
               ),
             ],
@@ -494,7 +449,7 @@ class _SaveScreenState extends State<SaveScreen> {
             LinearProgressIndicator(
               value: 0.0, // This would be calculated based on current progress
               backgroundColor: Colors.grey.shade200,
-              valueColor: const AlwaysStoppedAnimation<Color>(Colors.green),
+              valueColor: AlwaysStoppedAnimation<Color>(const Color(0xFF8EB55D)), // Updated to your green color
             ),
             const SizedBox(height: 4),
             const Text(
