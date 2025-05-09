@@ -96,27 +96,12 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
       );
       debugPrint('Update result: $result');
       
-      // Show success SnackBar styled like WithdrawScreen
-      // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Profile updated successfully'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.only(
-            // ignore: use_build_context_synchronously
-            bottom: MediaQuery.of(context).size.height - 100,
-            right: 20,
-            left: 20,
-          ),
-        ),
-      );
-      
-      // Pop back with true to trigger reload on HomeScreen
+      // Pop back with true to trigger reload and SnackBar on HomeScreen
       // ignore: use_build_context_synchronously
       Navigator.pop(context, true);
     } catch (e) {
       debugPrint('Error updating profile: $e');
+      // Show error SnackBar in ProfileInformationScreen
       // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

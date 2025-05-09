@@ -90,6 +90,7 @@ class AuthService {
       await _secureStorage.write(key: 'auth_token', value: token);
       SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.setBool(_isLoggedInKey, true);
+      debugPrint('Saved token: $token');
     } catch (e) {
       debugPrint('Error saving token: $e');
       throw Exception('Failed to store auth token: $e');
@@ -99,7 +100,9 @@ class AuthService {
   // Get stored token
   static Future<String?> getToken() async {
     try {
-      return await _secureStorage.read(key: 'auth_token');
+      final token = await _secureStorage.read(key: 'auth_token');
+      debugPrint('Retrieved token: $token');
+      return token;
     } catch (e) {
       debugPrint('Error retrieving token: $e');
       return null;
@@ -110,7 +113,10 @@ class AuthService {
   static Future<void> _saveUserData(UserModel user) async {
     try {
       SharedPreferences prefs = await SharedPreferences.getInstance();
-      await prefs.setString(_userKey, jsonEncode(user.toJson()));
+      final userJson = jsonEncode(user.toJson());
+      debugPrint('Saving user data: $userJson');
+      await prefs.setString(_userKey, userJson);
+      debugPrint('User data saved successfully');
     } catch (e) {
       debugPrint('Error saving user data: $e');
       throw Exception('Failed to store user data: $e');
@@ -122,25 +128,33 @@ class AuthService {
     try {
       final prefs = await SharedPreferences.getInstance();
       final isLoggedIn = prefs.getBool(_isLoggedInKey) ?? false;
+      debugPrint('Is logged in: $isLoggedIn');
       
-      if (!isLoggedIn) {
-        return null;
-      }
-
+      // Always check SharedPreferences for user data
+      await prefs.reload(); // Ensure fresh data
       final userJson = prefs.getString(_userKey);
-      if (userJson == null) {
-        // Try to fetch from API if we have a token but no stored user data
-        final token = await getToken();
-        if (token != null) {
-          final userInfo = await getUserInfo();
-          if (userInfo['success']) {
-            return UserModel.fromJson(userInfo['user']);
-          }
-        }
-        return null;
+      debugPrint('Retrieved user JSON: $userJson');
+      
+      if (userJson != null) {
+        final user = UserModel.fromJson(json.decode(userJson));
+        debugPrint('Parsed user: ${user.toJson()}');
+        return user;
       }
 
-      return UserModel.fromJson(json.decode(userJson));
+      // Fallback to API if token exists and no local data
+      final token = await getToken();
+      if (token != null) {
+        final userInfo = await getUserInfo();
+        debugPrint('API user info: $userInfo');
+        if (userInfo['success']) {
+          final user = UserModel.fromJson(userInfo['user']);
+          await _saveUserData(user); // Cache API data
+          return user;
+        }
+      }
+      
+      debugPrint('No user data found in SharedPreferences or API');
+      return null;
     } catch (e) {
       debugPrint('Error getting current user: $e');
       return null;
@@ -151,7 +165,9 @@ class AuthService {
   static Future<bool> isLoggedIn() async {
     try {
       String? token = await getToken();
-      return token != null;
+      bool isLoggedIn = token != null;
+      debugPrint('Checked isLoggedIn: $isLoggedIn');
+      return isLoggedIn;
     } catch (e) {
       debugPrint('Error checking login status: $e');
       return false;
@@ -180,6 +196,7 @@ class AuthService {
       );
 
       final data = jsonDecode(response.body);
+      debugPrint('Register response: $data');
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         // If registration includes token, save it
@@ -244,6 +261,7 @@ class AuthService {
       );
 
       final data = jsonDecode(response.body);
+      debugPrint('Login response: $data');
 
       if (response.statusCode == 200) {
         // Check for token with different possible key names
@@ -315,6 +333,7 @@ class AuthService {
       // Save the user data
       await _saveUserData(user);
 
+      debugPrint('Offline sign-in user: ${user.toJson()}');
       return {
         'success': true, 
         'user': user.toJson(),
@@ -353,6 +372,7 @@ class AuthService {
       SharedPreferences prefs = await SharedPreferences.getInstance();
       await prefs.remove(_isLoggedInKey);
       await prefs.remove(_userKey);
+      debugPrint('Logged out, cleared user data');
 
       return {'success': true, 'message': 'Logged out successfully'};
     } catch (e) {
@@ -370,6 +390,7 @@ class AuthService {
     try {
       String? token = await getToken();
       if (token == null) {
+        debugPrint('No token for API user info');
         return {
           'success': false,
           'message': 'Not authenticated',
@@ -386,6 +407,7 @@ class AuthService {
         },
       );
 
+      debugPrint('Get user info response: ${response.statusCode}');
       if (response.statusCode == 200) {
         final userData = jsonDecode(response.body);
         
@@ -433,6 +455,8 @@ class AuthService {
     String? photoUrl,
   }) async {
     try {
+      debugPrint('Updating profile with: displayName=$displayName, email=$email, phoneNumber=$phoneNumber, district=$district');
+      
       // First check if we have a token for server-side update
       String? token = await getToken();
       
@@ -455,11 +479,13 @@ class AuthService {
             }),
           );
           
+          debugPrint('Server update response: ${response.statusCode}, body: ${response.body}');
           if (response.statusCode == 200) {
             final data = jsonDecode(response.body);
             if (data.containsKey('user')) {
               final updatedUser = UserModel.fromJson(data['user']);
               await _saveUserData(updatedUser);
+              debugPrint('Server update successful, saved user: ${updatedUser.toJson()}');
               return {
                 'success': true,
                 'user': updatedUser.toJson(),
@@ -468,6 +494,7 @@ class AuthService {
             }
           } else if (response.statusCode == 401) {
             await logout();
+            debugPrint('Authentication expired during profile update');
             return {
               'success': false,
               'message': 'Authentication expired',
@@ -482,9 +509,26 @@ class AuthService {
       // Update locally if no token or server update failed
       final UserModel? currentUser = await getCurrentUser();
       if (currentUser == null) {
+        debugPrint('No user logged in for local update, creating new user');
+        // Create a new user if none exists
+        final newUser = UserModel(
+          id: 'user_${DateTime.now().millisecondsSinceEpoch}',
+          email: email ?? 'default@example.com',
+          displayName: displayName,
+          phoneNumber: phoneNumber,
+          district: district,
+          photoUrl: photoUrl,
+        );
+        await _saveUserData(newUser);
+        // Set logged-in state
+        await _saveToken('mock_token_${DateTime.now().millisecondsSinceEpoch}');
+        SharedPreferences prefs = await SharedPreferences.getInstance();
+        await prefs.setBool(_isLoggedInKey, true);
+        debugPrint('Local update created new user: ${newUser.toJson()}');
         return {
-          'success': false,
-          'message': 'No user is logged in'
+          'success': true,
+          'user': newUser.toJson(),
+          'message': 'Profile updated locally'
         };
       }
       
@@ -499,6 +543,7 @@ class AuthService {
 
       // Save the updated user data
       await _saveUserData(updatedUser);
+      debugPrint('Local update successful, saved user: ${updatedUser.toJson()}');
       
       return {
         'success': true,
@@ -520,11 +565,13 @@ class AuthService {
       // First try to get from cached user data
       final UserModel? user = await getCurrentUser();
       if (user != null) {
+        debugPrint('User admin status: ${user.isAdmin}');
         return user.isAdmin;
       }
       
       // If no cached user, try getting from API
       final userInfo = await getUserInfo();
+      debugPrint('API admin status: ${userInfo['isAdmin']}');
       return userInfo['isAdmin'] ?? false;
     } catch (e) {
       debugPrint('Error checking admin status: $e');
@@ -542,9 +589,11 @@ class AuthService {
     };
   }
   
-  // Initialize with default user for testing (optional)
+  // Initialize with default user for testing
   static Future<void> initializeWithDefaultUser() async {
+    debugPrint('Initializing default user...');
     final isUserLoggedIn = await isLoggedIn();
+    debugPrint('Is user logged in: $isUserLoggedIn');
     if (!isUserLoggedIn) {
       try {
         // Create a default user
@@ -566,9 +615,12 @@ class AuthService {
         // Mark as logged in
         SharedPreferences prefs = await SharedPreferences.getInstance();
         await prefs.setBool(_isLoggedInKey, true);
+        debugPrint('Initialized default user: ${user.toJson()}');
       } catch (e) {
         debugPrint('Error initializing default user: $e');
       }
+    } else {
+      debugPrint('User already logged in, skipping default initialization');
     }
   }
 }

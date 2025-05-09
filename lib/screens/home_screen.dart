@@ -81,7 +81,7 @@ class _HomeScreenState extends State<HomeScreen> {
           debugPrint('Updated _userName to: $_userName');
         });
       } else {
-        debugPrint('No user found');
+        debugPrint('No user found, keeping default name: $_userName');
       }
     } catch (e) {
       debugPrint('Error loading user profile: $e');
@@ -184,6 +184,12 @@ class _HomeScreenState extends State<HomeScreen> {
           style: const TextStyle(color: Colors.white),
         ),
         backgroundColor: snackBarColor,
+        behavior: SnackBarBehavior.floating,
+        margin: EdgeInsets.only(
+          bottom: MediaQuery.of(context).size.height - 100,
+          right: 20,
+          left: 20,
+        ),
         duration: const Duration(seconds: 3),
       ),
     );
@@ -197,6 +203,28 @@ class _HomeScreenState extends State<HomeScreen> {
           style: const TextStyle(color: Colors.white),
         ),
         backgroundColor: Colors.red,
+        behavior: SnackBarBehavior.floating,
+        margin: EdgeInsets.only(
+          bottom: MediaQuery.of(context).size.height - 100,
+          right: 20,
+          left: 20,
+        ),
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  void _showProfileUpdateSnackBar() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Profile updated successfully'),
+        backgroundColor: Colors.green,
+        behavior: SnackBarBehavior.floating,
+        margin: EdgeInsets.only(
+          bottom: MediaQuery.of(context).size.height - 100,
+          right: 20,
+          left: 20,
+        ),
         duration: const Duration(seconds: 3),
       ),
     );
@@ -246,6 +274,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       debugPrint('Profile screen returned: $result');
                                       if (result == true) {
                                         await _loadData();
+                                        _showProfileUpdateSnackBar();
                                       }
                                     },
                                   ),
