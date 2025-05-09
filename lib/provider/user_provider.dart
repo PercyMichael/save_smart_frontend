@@ -25,8 +25,8 @@ class UserProvider with ChangeNotifier {
   void loadUser() {
     _user = User(
       id: '1',
-      name: 'John Doe',
-      email: 'john.doe@example.com',
+      name: 'Sandra Nakawuka',
+      email: 'nakawukasandra8@gmail.com',
       balance: 5200.00,
       accounts: ['Savings', 'Checking', 'Investment'],
     );

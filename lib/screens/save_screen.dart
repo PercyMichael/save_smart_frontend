@@ -150,45 +150,22 @@ class _SaveScreenState extends State<SaveScreen> {
   }
 
   void _processDeposit(BuildContext context) {
-    // Show saving process started at the top
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: const Text('Saving process started...'),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: const Color(0xFF8EB55D), // Your green color
-        margin: const EdgeInsets.fromLTRB(16, 50, 16, 0), // Position at top
-      ),
-    );
-    
-    // Simulate processing time
-    Future.delayed(const Duration(seconds: 1), () {
-      // Show success dialog
-      showDialog(
-        // ignore: use_build_context_synchronously
-        context: context,
-        barrierDismissible: false,
-        builder: (context) {
-          return AlertDialog(
-            title: const Text('Success!'),
-            content: const Text('Your money has been saved successfully.'),
-            actions: [
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context); // Close dialog
-                  // More robust navigation to home screen
-                  Navigator.of(context).popUntil((route) => route.isFirst); 
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF8EB55D), // Your green color
-                ),
-                child: const Text('Back to Home'),
-              ),
-            ],
-          );
-        },
+    // Navigate back to home screen
+    Navigator.of(context).popUntil((route) => route.isFirst);
+
+    // Show success snackbar after a short delay to ensure navigation completes
+    Future.delayed(const Duration(milliseconds: 300), () {
+      // ignore: use_build_context_synchronously
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Saved successfully!'),
+          backgroundColor: const Color(0xFF8EB55D),
+          behavior: SnackBarBehavior.floating,
+          margin: const EdgeInsets.fromLTRB(16, 50, 16, 0), // Position at top
+          duration: const Duration(seconds: 3), // Show for 3 seconds
+        ),
       );
     });
-    // Here, you can add API integration for deposit processing
   }
 
   @override
@@ -201,6 +178,7 @@ class _SaveScreenState extends State<SaveScreen> {
         ),
         backgroundColor: const Color(0xFF8EB55D), // Updated to your green color
         centerTitle: true,
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -218,7 +196,7 @@ class _SaveScreenState extends State<SaveScreen> {
                 decoration: InputDecoration(
                   labelText: 'Amount to Save (UGX)',
                   border: const OutlineInputBorder(),
-                  prefixIcon: const Icon(Icons.attach_money),
+                  prefixIcon: const Icon(Icons.add_card),
                   helperText: 'Enter the amount you want to save',
                   suffixText: 'UGX',
                 ),
@@ -399,7 +377,9 @@ class _SaveScreenState extends State<SaveScreen> {
                     : null,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.all(16),
-                  backgroundColor: _formIsValid ? const Color(0xFF8EB55D) : null, // Updated to your green color
+                  backgroundColor: _formIsValid
+                      ? const Color(0xFF8EB55D)
+                      : null, // Updated to your green color
                   disabledBackgroundColor: Colors.grey.shade300,
                 ),
                 child: Text(
@@ -449,7 +429,8 @@ class _SaveScreenState extends State<SaveScreen> {
             LinearProgressIndicator(
               value: 0.0, // This would be calculated based on current progress
               backgroundColor: Colors.grey.shade200,
-              valueColor: AlwaysStoppedAnimation<Color>(const Color(0xFF8EB55D)), // Updated to your green color
+              valueColor: AlwaysStoppedAnimation<Color>(
+                  const Color(0xFF8EB55D)), // Updated to your green color
             ),
             const SizedBox(height: 4),
             const Text(

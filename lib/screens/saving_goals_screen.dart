@@ -8,7 +8,7 @@ const Color customGreen = Color(0xFF8EB55D);
 
 class SavingGoalsScreen extends StatefulWidget {
   // ignore: use_super_parameters
-  const SavingGoalsScreen({Key? key}) : super(key: key);
+  const SavingGoalsScreen({Key? key, required double currentBalance, required String userId}) : super(key: key);
 
   @override
   // ignore: library_private_types_in_public_api
@@ -30,6 +30,11 @@ class _SavingsGoalScreenState extends State<SavingGoalsScreen> {
   String _selectedCategory = 'Education';
   String _selectedPriority = 'Medium';
   String _selectedFrequency = 'Weekly';
+  
+  // Alert message state
+  bool _showAlert = false;
+  String _alertMessage = '';
+  Color _alertColor = customGreen;
   
   // Category options
   final List<String> _categories = [
@@ -55,33 +60,141 @@ class _SavingsGoalScreenState extends State<SavingGoalsScreen> {
     decimalDigits: 0
   );
   
+  // Recommended savings amount based on frequency and target
+  double _recommendedAmount = 0.0;
+  
+  @override
+  void initState() {
+    super.initState();
+    
+    // Set up listeners for dynamic calculations
+    _targetAmountController.addListener(_updateRecommendedAmount);
+    _currentBalanceController.addListener(_updateRecommendedAmount);
+    _contributionAmountController.addListener(_checkContributionAmount);
+  }
+  
+  // Calculate the recommended amount based on goal and timeframe
+  void _updateRecommendedAmount() {
+    double targetAmount = double.tryParse(_targetAmountController.text) ?? 0;
+    double currentBalance = double.tryParse(_currentBalanceController.text) ?? 0;
+    double remainingAmount = targetAmount - currentBalance > 0 ? targetAmount - currentBalance : 0;
+    
+    // Calculate days until target date
+    int daysRemaining = _targetDate.difference(DateTime.now()).inDays;
+    
+    if (daysRemaining <= 0 || remainingAmount <= 0) {
+      setState(() {
+        _recommendedAmount = 0;
+      });
+      return;
+    }
+    
+    // Calculate based on frequency
+    switch (_selectedFrequency) {
+      case 'Daily':
+        setState(() {
+          _recommendedAmount = remainingAmount / daysRemaining;
+        });
+        break;
+      case 'Weekly':
+        setState(() {
+          _recommendedAmount = remainingAmount / (daysRemaining / 7);
+        });
+        break;
+      case 'Monthly':
+        setState(() {
+          _recommendedAmount = remainingAmount / (daysRemaining / 30);
+        });
+        break;
+      default:
+        setState(() {
+          _recommendedAmount = 0;
+        });
+    }
+  }
+  
+  // Check if contribution amount is sufficient
+  void _checkContributionAmount() {
+    double contributionAmount = double.tryParse(_contributionAmountController.text) ?? 0;
+    
+    // If user has entered an amount and it's less than 50% of recommended
+    if (contributionAmount > 0 && _recommendedAmount > 0 && contributionAmount < (_recommendedAmount * 0.5)) {
+      setState(() {
+        _showAlert = true;
+        _alertMessage = 'Your contribution may be too low to reach your goal on time.';
+        _alertColor = Colors.amber;
+      });
+    } else {
+      setState(() {
+        _showAlert = false;
+      });
+    }
+  }
+  
+  // Show alert at the top
+  void _showTopAlert(String message, Color backgroundColor) {
+    setState(() {
+      _showAlert = true;
+      _alertMessage = message;
+      _alertColor = backgroundColor;
+    });
+    
+    // Auto-hide after 3 seconds
+    Future.delayed(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          _showAlert = false;
+        });
+      }
+    });
+  }
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text(
-          'Create Savings Goal',
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
-        ),
-        backgroundColor: customGreen,
-        actions: [
-          // Redesigned Skip button in the app bar
-          TextButton(
-            onPressed: () {
-              // Navigate to SaveScreen with default values
-              _skipToSaveScreen(context);
-            },
-            child: const Text(
-              'Skip',
-              style: TextStyle(
-                color: Colors.white, 
-                fontWeight: FontWeight.w500,
-                fontSize: 15,
+      appBar: PreferredSize(
+        preferredSize: Size.fromHeight(_showAlert ? 100 : 56),
+        child: Column(
+          children: [
+            AppBar(
+              title: const Text(
+                'Create Savings Goal',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
               ),
+              backgroundColor: customGreen,
+              actions: [
+                // Redesigned Skip button in the app bar
+                TextButton(
+                  onPressed: () {
+                    // Navigate to SaveScreen with default values
+                    _skipToSaveScreen(context);
+                  },
+                  child: const Text(
+                    'Skip',
+                    style: TextStyle(
+                      color: Colors.white, 
+                      fontWeight: FontWeight.w500,
+                      fontSize: 15,
+                    ),
+                  ),
+                ),
+              ],
+              iconTheme: const IconThemeData(color: Colors.white),
             ),
-          ),
-        ],
-        iconTheme: const IconThemeData(color: Colors.white),
+            // Alert message banner below AppBar
+            if (_showAlert)
+              Container(
+                width: double.infinity,
+                color: _alertColor,
+                padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                child: Text(
+                  _alertMessage,
+                  style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+          ],
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16.0),
@@ -125,7 +238,7 @@ class _SavingsGoalScreenState extends State<SavingGoalsScreen> {
                 decoration: const InputDecoration(
                   labelText: 'Target Amount (UGX)',
                   border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.attach_money),
+                  prefixIcon: Icon(Icons.check_circle_outline),
                   helperText: 'Total amount needed to achieve your goal in Ugandan Shillings',
                 ),
                 keyboardType: TextInputType.number,
@@ -177,6 +290,8 @@ class _SavingsGoalScreenState extends State<SavingGoalsScreen> {
                   if (picked != null && picked != _targetDate) {
                     setState(() {
                       _targetDate = picked;
+                      // Recalculate recommended amount when date changes
+                      _updateRecommendedAmount();
                     });
                   }
                 },
@@ -263,10 +378,63 @@ class _SavingsGoalScreenState extends State<SavingGoalsScreen> {
                   if (newValue != null) {
                     setState(() {
                       _selectedFrequency = newValue;
+                      // Recalculate recommended amount when frequency changes
+                      _updateRecommendedAmount();
                     });
                   }
                 },
               ),
+              const SizedBox(height: 16),
+              
+              // Recommended Amount Section (New)
+              if (_recommendedAmount > 0)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    // ignore: deprecated_member_use
+                    color: customGreen.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    // ignore: deprecated_member_use
+                    border: Border.all(color: customGreen.withOpacity(0.3)),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.lightbulb_outline, color: customGreen),
+                          const SizedBox(width: 8),
+                          const Text(
+                            'Recommended Amount',
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: customGreen,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'To reach your goal by ${DateFormat('dd MMM yyyy').format(_targetDate)}, we recommend depositing ${currencyFormat.format(_recommendedAmount)} $_selectedFrequency.',
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          TextButton(
+                            onPressed: () {
+                              // Apply recommended amount to contribution field
+                              setState(() {
+                                _contributionAmountController.text = _recommendedAmount.round().toString();
+                              });
+                            },
+                            child: const Text('Use this amount'),
+                          ),
+                        ],
+                      )
+                    ],
+                  ),
+                ),
               const SizedBox(height: 16),
               
               // Contribution Amount
@@ -340,7 +508,7 @@ class _SavingsGoalScreenState extends State<SavingGoalsScreen> {
                       Expanded(
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blue,
+                            backgroundColor: customGreen,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             elevation: 2,
@@ -388,12 +556,7 @@ class _SavingsGoalScreenState extends State<SavingGoalsScreen> {
   // Method to save the goal and show success message
   void _saveGoal(BuildContext context) {
     // Here you would save the goal data to your database
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Savings goal created successfully!'),
-        backgroundColor: customGreen,
-      ),
-    );
+    _showTopAlert('Savings goal created successfully!', customGreen);
   }
   
   // Method to save the goal and navigate to the save screen
@@ -445,12 +608,7 @@ class _SavingsGoalScreenState extends State<SavingGoalsScreen> {
     };
     
     // Show feedback that we're skipping
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Proceeding to save without creating a goal'),
-        backgroundColor: customGreen,
-      ),
-    );
+    _showTopAlert('Proceeding to save without creating a goal', customGreen);
     
     // Navigate to SaveScreen with default data
     Navigator.push(
@@ -475,6 +633,48 @@ class _SavingsGoalScreenState extends State<SavingGoalsScreen> {
     // Days remaining calculation
     int daysRemaining = _targetDate.difference(DateTime.now()).inDays;
     
+    // Projected completion date based on contribution rate
+    String projectedCompletion = 'On target';
+    double contributionAmount = double.tryParse(_contributionAmountController.text) ?? 0;
+    
+    if (targetAmount > currentBalance && contributionAmount > 0) {
+      double remaining = targetAmount - currentBalance;
+      int numberOfContributions = (remaining / contributionAmount).ceil();
+      
+      // Calculate projected date based on frequency
+      DateTime projectedDate;
+      switch (_selectedFrequency) {
+        case 'Daily':
+          projectedDate = DateTime.now().add(Duration(days: numberOfContributions));
+          break;
+        case 'Weekly':
+          projectedDate = DateTime.now().add(Duration(days: numberOfContributions * 7));
+          break;
+        case 'Monthly':
+          projectedDate = DateTime.now().add(Duration(days: numberOfContributions * 30));
+          break;
+        default:
+          projectedDate = _targetDate;
+      }
+      
+      if (projectedDate.isAfter(_targetDate)) {
+        int daysLate = projectedDate.difference(_targetDate).inDays;
+        projectedCompletion = daysLate > 30 ? 'At risk' : 'Slightly delayed';
+      }
+    }
+    
+    // Dynamic color based on progress
+    Color progressColor;
+    if (progress < 0.25) {
+      progressColor = Colors.red;
+    } else if (progress < 0.5) {
+      progressColor = Colors.orange;
+    } else if (progress < 0.75) {
+      progressColor = Colors.amber;
+    } else {
+      progressColor = customGreen;
+    }
+    
     return Card(
       elevation: 4,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -486,7 +686,31 @@ class _SavingsGoalScreenState extends State<SavingGoalsScreen> {
               goalName,
               style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 16),
+            // Show dynamic status tag
+            Container(
+              margin: const EdgeInsets.symmetric(vertical: 8),
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                // ignore: deprecated_member_use
+                color: projectedCompletion == 'On target' ? customGreen.withOpacity(0.2) : 
+                       // ignore: deprecated_member_use
+                       projectedCompletion == 'Slightly delayed' ? Colors.amber.withOpacity(0.2) : 
+                       // ignore: deprecated_member_use
+                       Colors.red.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(
+                projectedCompletion,
+                style: TextStyle(
+                  color: projectedCompletion == 'On target' ? customGreen : 
+                         projectedCompletion == 'Slightly delayed' ? Colors.amber.shade800 : 
+                         Colors.red,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
             
             CircularPercentIndicator(
               radius: 80.0,
@@ -505,7 +729,7 @@ class _SavingsGoalScreenState extends State<SavingGoalsScreen> {
                   const Text('Complete')
                 ],
               ),
-              progressColor: customGreen,
+              progressColor: progressColor,
               backgroundColor: Color(0xFFD8E6C3), // Lighter shade of customGreen
               animation: true,
               animationDuration: 1000,
@@ -583,6 +807,12 @@ class _SavingsGoalScreenState extends State<SavingGoalsScreen> {
   
   @override
   void dispose() {
+    // Remove listeners to prevent memory leaks
+    _targetAmountController.removeListener(_updateRecommendedAmount);
+    _currentBalanceController.removeListener(_updateRecommendedAmount);
+    _contributionAmountController.removeListener(_checkContributionAmount);
+    
+    // Dispose controllers
     _goalNameController.dispose();
     _targetAmountController.dispose();
     _currentBalanceController.dispose();

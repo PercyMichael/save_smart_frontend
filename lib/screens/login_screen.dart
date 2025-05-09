@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
+// ignore: depend_on_referenced_packages
+//import 'package:http/http.dart' as http;
+import 'package:savesmart_app/screens/admin_dashboard_screen.dart';
+//import 'dart:convert';
+import 'dart:async';
 import 'resetpassword_screen.dart';
 import 'home_screen.dart';
+//import 'package:savesmart_app/services/auth_service.dart'; // Add this import
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -14,13 +20,12 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   bool _obscurePassword = true;
   final _formKey = GlobalKey<FormState>();
-
-  final _accountNumberController = TextEditingController();
+  final _inputController = TextEditingController();
   final _passwordController = TextEditingController();
 
   @override
   void dispose() {
-    _accountNumberController.dispose();
+    _inputController.dispose();
     _passwordController.dispose();
     super.dispose();
   }
@@ -34,30 +39,37 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
-    try {
-      await Future.delayed(const Duration(seconds: 2));
+    // Simulate network delay
+    await Future.delayed(const Duration(seconds: 2));
 
-      if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (context) => HomeScreen()),
-          (route) => false,
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Login failed. Please try again.'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+    // For demo purposes, we'll just navigate based on a mock condition
+    // In a real app, you'd use your actual authentication logic here
+    final isAdmin = _inputController.text.toLowerCase().contains('admin');
+
+    if (mounted) {
+      setState(() {
+        _isLoading = false;
+      });
+      
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(
+          builder: (context) => isAdmin ? const AdminDashboard() : const HomeScreen(),
+        ),
+        (route) => false,
+      );
+    }
+  }
+
+  // ignore: unused_element
+  void _showErrorSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 3),
+        ),
+      );
     }
   }
 
@@ -70,16 +82,15 @@ class _LoginScreenState extends State<LoginScreen> {
           child: Column(
             children: [
               const Spacer(),
-
               Image.asset(
                 'assets/images/mpc_logo.png',
                 height: 100,
                 errorBuilder: (context, error, stackTrace) {
-                  return const Text('Logo not found', style: TextStyle(color: Colors.red));
+                  return const Text('Logo not found',
+                      style: TextStyle(color: Colors.red));
                 },
               ),
               const SizedBox(height: 15),
-
               const Text(
                 "LOGIN",
                 style: TextStyle(
@@ -89,7 +100,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 25),
-
               Form(
                 key: _formKey,
                 child: Padding(
@@ -97,24 +107,29 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
                     children: [
                       _buildTextFieldWithIcon(
-                        controller: _accountNumberController,
+                        controller: _inputController,
                         icon: Icons.person_outline,
                         hintText: "Account Number",
                         validator: (value) {
                           if (value == null || value.isEmpty) {
-                            return 'Please enter your account number';
+                            return 'Please enter your account number or email';
                           }
-                          if (value.length < 6) {
-                            return 'Account number must be at least 6 characters';
+                          if (value.contains('@')) {
+                            if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                                .hasMatch(value)) {
+                              return 'Please enter a valid email';
+                            }
+                          } else {
+                            if (value.length < 6) {
+                              return 'Account number must be at least 6 characters';
+                            }
                           }
                           return null;
                         },
                       ),
                       const SizedBox(height: 10),
-
                       _buildPasswordField(),
                       const SizedBox(height: 10),
-
                       Align(
                         alignment: Alignment.centerRight,
                         child: TextButton(
@@ -124,7 +139,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => const ResetPasswordScreen(),
+                                      builder: (context) =>
+                                          const ResetPasswordScreen(),
                                     ),
                                   );
                                 },
@@ -139,19 +155,19 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                       const SizedBox(height: 10),
-
-                      // Login Button
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
                           onPressed: _isLoading ? null : _handleLogin,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color.fromARGB(255, 148, 187, 101),
+                            backgroundColor:
+                                const Color.fromARGB(255, 148, 187, 101),
                             padding: const EdgeInsets.symmetric(vertical: 10),
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(8),
                             ),
-                            disabledBackgroundColor: const Color.fromARGB(255, 240, 235, 235),
+                            disabledBackgroundColor:
+                                const Color.fromARGB(255, 240, 235, 235),
                           ),
                           child: _isLoading
                               ? const SizedBox(
@@ -159,7 +175,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                   width: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                        Colors.white),
                                   ),
                                 )
                               : const Text(
@@ -172,12 +189,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                         ),
                       ),
-                      // Removed the "Don't have an account?" section
                     ],
                   ),
                 ),
               ),
-
               const Spacer(),
             ],
           ),
@@ -198,7 +213,8 @@ class _LoginScreenState extends State<LoginScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color.fromARGB(255, 66, 71, 60), width: 1.5),
+        border: Border.all(
+            color: const Color.fromARGB(255, 66, 71, 60), width: 1.5),
       ),
       child: Row(
         children: [
@@ -229,11 +245,13 @@ class _LoginScreenState extends State<LoginScreen> {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: const Color.fromARGB(255, 66, 71, 60), width: 1.5),
+        border: Border.all(
+            color: const Color.fromARGB(255, 66, 71, 60), width: 1.5),
       ),
       child: Row(
         children: [
-          const Icon(Icons.lock_outline, color: Color.fromARGB(255, 66, 73, 57)),
+          const Icon(Icons.lock_outline,
+              color: Color.fromARGB(255, 66, 73, 57)),
           const SizedBox(width: 10),
           Expanded(
             child: TextFormField(

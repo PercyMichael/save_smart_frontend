@@ -46,9 +46,9 @@ class AboutScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 32),
-            _buildInfoSection('Developer', 'YourCompany, Inc.', themeColor),
-            _buildInfoSection('Contact', 'support@yourcompany.com', themeColor),
-            _buildInfoSection('Website', 'www.yourcompany.com', themeColor),
+            _buildInfoSection('Developer', 'My People And Culture Association.', themeColor),
+            _buildInfoSection('Contact', 'rehemamalole@gmail.com', themeColor),
+            _buildInfoSection('Website', 'https://t.co/As4DUWlEU6', themeColor),
             const Divider(),
             _buildExpandableSection(
               'Release Notes',

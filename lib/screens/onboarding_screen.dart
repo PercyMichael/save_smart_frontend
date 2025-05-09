@@ -76,7 +76,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             child: const Text(
               'Skip',
               style: TextStyle(
-                color: Colors.grey,
+                color: Colors.black,
                 fontSize: 16,
                 fontWeight: FontWeight.w500,
               ),
@@ -121,7 +121,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 16,
-                          color: Colors.grey[600],
+                          color: const Color.fromARGB(255, 49, 49, 49),
                         ),
                       ),
                     ],
@@ -145,7 +145,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   height: 50,
                   width: 50,
                   decoration: const BoxDecoration(
-                    color: Colors.blue,
+                    color: Colors.lightGreen,
                     shape: BoxShape.circle,
                   ),
                   child: IconButton(
@@ -182,7 +182,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       margin: const EdgeInsets.only(right: 5),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        color: currentIndex == index ? Colors.blue : Colors.grey,
+        color: currentIndex == index ? Colors.lightGreen : Colors.grey,
       ),
     );
   }

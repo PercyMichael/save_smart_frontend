@@ -39,6 +39,8 @@ class Transaction {
     this.fromAccount,
     this.toAccount,
   });
+
+  static Future<void> fromJson(json) async {}
 }
 
 class TransactionProvider with ChangeNotifier {

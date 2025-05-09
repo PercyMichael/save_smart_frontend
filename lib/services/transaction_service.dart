@@ -1,190 +1,187 @@
-// lib/services/transaction_service.dart
-
 import 'dart:convert';
-import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:uuid/uuid.dart';
-import '../models/transaction_model.dart';
+import 'package:savesmart_app/models/transaction_model.dart';
 
 class TransactionService {
+  // Keys for SharedPreferences
   static const String _transactionsKey = 'transactions';
   static const String _balanceKey = 'wallet_balance';
-  static const double _initialBalance = 215000000.0; // Initial balance of 58095 * 3700 from original code
-  static final Uuid _uuid = Uuid();
-
-  // Get wallet balance
-  static Future<double> getWalletBalance() async {
+  
+  // In-memory cache for better performance
+  static List<TransactionModel>? _transactionsCache;
+  static double? _walletBalanceCache;
+  
+  // Add a new transaction to the system
+  static Future<void> addTransaction(TransactionModel transaction) async {
+    // Get current transactions
+    final List<TransactionModel> transactions = await getTransactions();
+    
+    // Add the new transaction
+    transactions.add(transaction);
+    
+    // Update the wallet balance
+    double newBalance = await getWalletBalance();
+    if (transaction.type == TransactionType.save) {
+      newBalance += transaction.amount;
+    } else if (transaction.type == TransactionType.withdrawal || 
+              transaction.type == TransactionType.transfer) {
+      newBalance -= transaction.amount;
+    }
+    
+    // Update cache
+    _transactionsCache = transactions;
+    _walletBalanceCache = newBalance;
+    
+    // Save to persistent storage
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getDouble(_balanceKey) ?? _initialBalance;
+    await prefs.setString(_transactionsKey, 
+      jsonEncode(transactions.map((t) => t.toJson()).toList()));
+    await prefs.setDouble(_balanceKey, newBalance);
   }
-
-  // Save wallet balance
-  static Future<void> saveWalletBalance(double balance) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setDouble(_balanceKey, balance);
-  }
-
+  
   // Get all transactions
-  static Future<List<TransactionModel>> getAllTransactions() async {
+  static Future<List<TransactionModel>> getTransactions() async {
+    // Return from cache if available
+    if (_transactionsCache != null) {
+      return _transactionsCache!;
+    }
+    
     try {
       final prefs = await SharedPreferences.getInstance();
       final String? transactionsJson = prefs.getString(_transactionsKey);
       
-      if (transactionsJson == null) {
-        // If no transactions exist, return empty list
-        return [];
+      if (transactionsJson != null) {
+        final List<dynamic> decoded = jsonDecode(transactionsJson);
+        _transactionsCache = decoded
+            .map((item) => TransactionModel.fromJson(item))
+            .toList();
+        return _transactionsCache!;
       }
-      
-      List<dynamic> transactionsList = jsonDecode(transactionsJson);
-      return transactionsList
-          .map((item) => TransactionModel.fromJson(item))
-          .toList()
-          ..sort((a, b) => b.date.compareTo(a.date)); // Sort by most recent first
     } catch (e) {
-      debugPrint('Error getting transactions: $e');
-      return [];
+      // ignore: avoid_print
+      print('Error fetching transactions: $e');
     }
+    
+    // If no transactions found or error occurred, initialize with sample data
+    await initializeWithSampleData();
+    return _transactionsCache!;
   }
-
-  // Save all transactions
-  static Future<void> saveAllTransactions(List<TransactionModel> transactions) async {
+  
+  // Get most recent transactions
+  static Future<List<TransactionModel>> getRecentTransactions(int count) async {
+    final transactions = await getTransactions();
+    // Sort by date, newest first
+    transactions.sort((a, b) => b.date.compareTo(a.date));
+    // Return requested number of transactions or all if fewer exist
+    return transactions.take(count).toList();
+  }
+  
+  // Get current wallet balance
+  static Future<double> getWalletBalance() async {
+    // Return from cache if available
+    if (_walletBalanceCache != null) {
+      return _walletBalanceCache!;
+    }
+    
     try {
       final prefs = await SharedPreferences.getInstance();
-      final String transactionsJson = jsonEncode(
-        transactions.map((transaction) => transaction.toJson()).toList(),
-      );
-      await prefs.setString(_transactionsKey, transactionsJson);
-    } catch (e) {
-      debugPrint('Error saving transactions: $e');
-    }
-  }
-
-  // Get recent transactions
-  static Future<List<TransactionModel>> getRecentTransactions(int limit) async {
-    final transactions = await getAllTransactions();
-    return transactions.take(limit).toList();
-  }
-
-  // Add a deposit transaction
-  static Future<void> addDeposit(
-    double amount,
-    String description,
-    String userId, {
-    String? goalId,
-  }) async {
-    await _addTransaction(
-      amount,
-      TransactionType.deposit,
-      description,
-      userId,
-      goalId: goalId,
-    );
-  }
-
-  // Add a withdrawal transaction
-  static Future<void> addWithdrawal(
-    double amount,
-    String description,
-    String phoneNumber,
-    String destinationType,
-    String userId, {
-    String? goalId,
-  }) async {
-    await _addTransaction(
-      amount,
-      TransactionType.withdrawal,
-      description,
-      userId,
-      goalId: goalId,
-    );
-  }
-
-  // Add a transfer transaction
-  static Future<void> addTransfer(
-    double amount,
-    String description,
-    String userId, {
-    String? goalId,
-  }) async {
-    await _addTransaction(
-      amount,
-      TransactionType.transfer,
-      description,
-      userId,
-      goalId: goalId,
-    );
-  }
-
-  // Private method to add a transaction
-  static Future<void> _addTransaction(
-    double amount,
-    TransactionType type,
-    String description,
-    String userId, {
-    String? goalId,
-  }) async {
-    try {
-      // Create new transaction
-      final transaction = TransactionModel(
-        id: _uuid.v4(),
-        amount: amount,
-        date: DateTime.now(),
-        type: type,
-        description: description,
-        userId: userId,
-        goalId: goalId,
-      );
-
-      // Get existing transactions
-      final transactions = await getAllTransactions();
-      transactions.insert(0, transaction); // Add to the beginning of the list
-
-      // Save all transactions
-      await saveAllTransactions(transactions);
-
-      // Update balance
-      final currentBalance = await getWalletBalance();
-      final newBalance = type == TransactionType.deposit 
-          ? currentBalance + amount 
-          : currentBalance - amount;
-      await saveWalletBalance(newBalance);
-    } catch (e) {
-      debugPrint('Error adding transaction: $e');
-      rethrow; // Rethrow to handle in UI
-    }
-  }
-
-  // Delete a transaction
-  static Future<void> deleteTransaction(String id) async {
-    try {
-      final transactions = await getAllTransactions();
-      final transaction = transactions.firstWhere((t) => t.id == id);
+      final double? balance = prefs.getDouble(_balanceKey);
       
-      // Update balance
-      final currentBalance = await getWalletBalance();
-      final newBalance = transaction.type == TransactionType.deposit 
-          ? currentBalance - transaction.amount 
-          : currentBalance + transaction.amount;
-      await saveWalletBalance(newBalance);
-      
-      // Remove transaction and save
-      transactions.removeWhere((t) => t.id == id);
-      await saveAllTransactions(transactions);
+      if (balance != null) {
+        _walletBalanceCache = balance;
+        return balance;
+      }
     } catch (e) {
-      debugPrint('Error deleting transaction: $e');
-      rethrow;
+      // ignore: avoid_print
+      print('Error fetching wallet balance: $e');
     }
+    
+    // If no balance found or error occurred, calculate from transactions
+    final transactions = await getTransactions();
+    double calculatedBalance = transactions.fold(0, (sum, transaction) {
+      if (transaction.type == TransactionType.save) {
+        return sum + transaction.amount;
+      } else if (transaction.type == TransactionType.withdrawal || 
+                transaction.type == TransactionType.transfer) {
+        return sum - transaction.amount;
+      }
+      return sum;
+    });
+    
+    // Update cache and storage
+    _walletBalanceCache = calculatedBalance;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble(_balanceKey, calculatedBalance);
+    
+    return calculatedBalance;
   }
-
-  // Initialize with sample data if needed
+  
+  // Initialize with sample data if no data exists
   static Future<void> initializeWithSampleData() async {
-    final transactions = await getAllTransactions();
-    if (transactions.isEmpty) {
-      final userId = "user_${_uuid.v4().substring(0, 8)}";
-      
-      await addDeposit(50000, "Initial deposit", userId);
-      await addWithdrawal(20000, "Withdrawal for groceries", "0704985597", "mobile", userId);
-      await addDeposit(10000, "Savings contribution", userId);
+    // Check if data already exists
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.containsKey(_transactionsKey)) {
+      return; // Data already exists
     }
+    
+    // Create sample transactions
+    final now = DateTime.now();
+    final sampleTransactions = [
+      TransactionModel(
+        id: '1',
+        amount: 50000,
+        date: now.subtract(const Duration(days: 1)),
+        type: TransactionType.save,
+        description: 'Initial deposit',
+        userId: 'user_main', source: '', category: '',
+      ),
+      TransactionModel(
+        id: '2',
+        amount: 20000,
+        date: now.subtract(const Duration(days: 2)),
+        type: TransactionType.save,
+        description: 'Monthly savings',
+        userId: 'user_main', source: '', category: '',
+      ),
+      TransactionModel(
+        id: '3',
+        amount: 10000,
+        date: now.subtract(const Duration(days: 3)),
+        type: TransactionType.withdrawal,
+        description: 'Grocery shopping',
+        userId: 'user_main', source: '', category: '',
+      ),
+    ];
+    
+    // Calculate initial balance
+    double initialBalance = sampleTransactions.fold(0, (sum, transaction) {
+      if (transaction.type == TransactionType.save) {
+        return sum + transaction.amount;
+      } else if (transaction.type == TransactionType.withdrawal || 
+                transaction.type == TransactionType.transfer) {
+        return sum - transaction.amount;
+      }
+      return sum;
+    });
+    
+    // Update cache
+    _transactionsCache = sampleTransactions;
+    _walletBalanceCache = initialBalance;
+    
+    // Save to storage
+    await prefs.setString(_transactionsKey, 
+      jsonEncode(sampleTransactions.map((t) => t.toJson()).toList()));
+    await prefs.setDouble(_balanceKey, initialBalance);
   }
+  
+  // Clear all data (useful for testing/logout)
+  static Future<void> clearData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_transactionsKey);
+    await prefs.remove(_balanceKey);
+    _transactionsCache = null;
+    _walletBalanceCache = null;
+  }
+
+  static addWithdrawal(double amount, String s, String userId, String phoneNumber, String destinationType) {}
 }

@@ -70,10 +70,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     borderSide: BorderSide(color: themeColor),
                   ),
                   // ignore: deprecated_member_use
-                  labelStyle: TextStyle(color: themeColor.withOpacity(0.8)),
-                  prefixIcon: Icon(Icons.lock, color: themeColor),
+                  labelStyle: const TextStyle(color: Colors.black),
+                  prefixIcon: const Icon(Icons.lock, color: Colors.black),
                   suffixIcon: _usePIN ? null : IconButton(
-                    icon: Icon(_obscureCurrentPassword ? Icons.visibility : Icons.visibility_off, color: themeColor),
+                    icon: Icon(_obscureCurrentPassword ? Icons.visibility : Icons.visibility_off, color: Colors.black),
                     onPressed: () {
                       setState(() {
                         _obscureCurrentPassword = !_obscureCurrentPassword;
@@ -105,10 +105,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     borderSide: BorderSide(color: themeColor),
                   ),
                   // ignore: deprecated_member_use
-                  labelStyle: TextStyle(color: themeColor.withOpacity(0.8)),
-                  prefixIcon: Icon(Icons.lock_open, color: themeColor),
+                  labelStyle: const TextStyle(color: Colors.black),
+                  prefixIcon: const Icon(Icons.lock_open, color: Colors.black),
                   suffixIcon: _usePIN ? null : IconButton(
-                    icon: Icon(_obscureNewPassword ? Icons.visibility : Icons.visibility_off, color: themeColor),
+                    icon: Icon(_obscureNewPassword ? Icons.visibility : Icons.visibility_off, color: Colors.black),
                     onPressed: () {
                       setState(() {
                         _obscureNewPassword = !_obscureNewPassword;
@@ -143,10 +143,10 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
                     borderSide: BorderSide(color: themeColor),
                   ),
                   // ignore: deprecated_member_use
-                  labelStyle: TextStyle(color: themeColor.withOpacity(0.8)),
-                  prefixIcon: Icon(Icons.lock_outline, color: themeColor),
+                  labelStyle: const TextStyle(color: Colors.black),
+                  prefixIcon: const Icon(Icons.lock_outline, color: Colors.black),
                   suffixIcon: _usePIN ? null : IconButton(
-                    icon: Icon(_obscureConfirmPassword ? Icons.visibility : Icons.visibility_off, color: themeColor),
+                    icon: Icon(_obscureConfirmPassword ? Icons.visibility : Icons.visibility_off, color: Colors.black),
                     onPressed: () {
                       setState(() {
                         _obscureConfirmPassword = !_obscureConfirmPassword;
@@ -172,9 +172,9 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
               ),
               const SizedBox(height: 24),
               if (!_usePIN) ...[
-                Text(
+                const Text(
                   "Password Requirements:",
-                  style: TextStyle(fontWeight: FontWeight.bold, color: themeColor),
+                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black),
                 ),
                 const SizedBox(height: 8),
                 const Text("• At least 8 characters"),

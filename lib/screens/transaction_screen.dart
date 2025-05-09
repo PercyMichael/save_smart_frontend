@@ -1,79 +1,13 @@
-import 'package:flutter/material.dart'; 
+import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:uuid/uuid.dart'; // Add this package for generating unique IDs
+import 'package:savesmart_app/models/transaction_model.dart' as model;
+import 'package:savesmart_app/services/transaction_service.dart';
+import 'package:uuid/uuid.dart';
+import 'dart:math';
 
-enum TransactionType { deposit, withdrawal, transfer }
-
-class TransactionModel {
-  final String id;
-  final double amount;
-  final DateTime date;
-  final TransactionType type;
-  final String description;
-  final String userId;
-  final String? goalId;
-  
-  // Additional fields for transaction details
-  final String? depositSource;
-  final String? withdrawalDestination;
-  final String? mobileProvider;
-  final String? mobileMoneyNumber;
-  final String? transferRecipient;
-
-  TransactionModel({
-    required this.id,
-    required this.amount,
-    required this.date,
-    required this.type,
-    required this.description,
-    required this.userId,
-    this.goalId,
-    this.depositSource,
-    this.withdrawalDestination,
-    this.mobileProvider,
-    this.mobileMoneyNumber,
-    this.transferRecipient,
-  });
-
-  factory TransactionModel.fromJson(Map<String, dynamic> json) {
-    return TransactionModel(
-      id: json['id'] ?? '',
-      amount: (json['amount'] ?? 0.0).toDouble(),
-      date: json['date'] != null ? DateTime.parse(json['date']) : DateTime.now(),
-      type: _parseTransactionType(json['type']),
-      description: json['description'] ?? '',
-      userId: json['userId'] ?? '',
-      goalId: json['goalId'],
-      depositSource: json['depositSource'],
-      withdrawalDestination: json['withdrawalDestination'],
-      mobileProvider: json['mobileProvider'],
-      mobileMoneyNumber: json['mobileMoneyNumber'],
-      transferRecipient: json['transferRecipient'],
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'amount': amount,
-      'date': date.toIso8601String(),
-      'type': type.toString().split('.').last,
-      'description': description,
-      'userId': userId,
-      'goalId': goalId,
-      'depositSource': depositSource,
-      'withdrawalDestination': withdrawalDestination,
-      'mobileProvider': mobileProvider,
-      'mobileMoneyNumber': mobileMoneyNumber,
-      'transferRecipient': transferRecipient,
-    };
-  }
-
-  static TransactionType _parseTransactionType(String? typeStr) {
-    if (typeStr == 'deposit') return TransactionType.deposit;
-    if (typeStr == 'withdrawal') return TransactionType.withdrawal;
-    if (typeStr == 'transfer') return TransactionType.transfer;
-    return TransactionType.deposit; // Default
+extension StringExtension on String {
+  String capitalize() {
+    return isNotEmpty ? '${this[0].toUpperCase()}${substring(1)}' : '';
   }
 }
 
@@ -81,9 +15,9 @@ class TransactionScreen extends StatefulWidget {
   final String userId;
   final String? goalId;
   final double currentBalance;
-  
+
   const TransactionScreen({
-    super.key, 
+    super.key,
     required this.userId,
     this.goalId,
     required this.currentBalance,
@@ -99,19 +33,18 @@ class _TransactionScreenState extends State<TransactionScreen> {
   double _amount = 0;
   // ignore: unused_field
   String _description = '';
-  TransactionType _transactionType = TransactionType.deposit;
-  String _depositSource = 'mobile_money'; // Default deposit source
-  String _withdrawalDestination = 'mobile_money'; // Default withdrawal destination
-  String _mobileProvider = ''; // MTN or Airtel
+  model.TransactionType _transactionType = model.TransactionType.save;
+  String _depositSource = 'mobile_money';
+  String _withdrawalDestination = 'mobile_money';
+  String _mobileProvider = '';
   final TextEditingController _amountController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
   final TextEditingController _mobileMoneyNumberController = TextEditingController();
   final TextEditingController _withdrawalMobileNumberController = TextEditingController();
-  
+
   final NumberFormat currencyFormat = NumberFormat('#,###');
-  final Color customGreen = const Color(0xFF8EB55D); // Custom green color
-  
+  final Color customGreen = const Color(0xFF8EB55D);
   String _alertMessage = '';
   bool _showAlert = false;
 
@@ -119,11 +52,11 @@ class _TransactionScreenState extends State<TransactionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: _showAlert 
+        title: _showAlert
             ? Text(_alertMessage, style: const TextStyle(color: Colors.white, fontSize: 16))
             : const Text('New Transaction', style: TextStyle(color: Colors.white)),
         backgroundColor: _showAlert ? Colors.green : customGreen,
-        iconTheme: const IconThemeData(color: Colors.white), // Makes back arrow white
+        iconTheme: const IconThemeData(color: Colors.white),
       ),
       body: SingleChildScrollView(
         child: Padding(
@@ -139,19 +72,20 @@ class _TransactionScreenState extends State<TransactionScreen> {
                 const SizedBox(height: 20),
                 _buildAmountInput(),
                 const SizedBox(height: 20),
-                if (_transactionType == TransactionType.transfer)
-                  _buildPhoneInput(),
-                if (_transactionType == TransactionType.deposit)
-                  _buildDepositSourceInput(),
-                if (_transactionType == TransactionType.withdrawal)
-                  _buildWithdrawalDestinationInput(),
-                if (_transactionType == TransactionType.deposit && _depositSource == 'mobile_money')
+                if (_transactionType == model.TransactionType.transfer) _buildPhoneInput(),
+                if (_transactionType == model.TransactionType.save) _buildDepositSourceInput(),
+                if (_transactionType == model.TransactionType.withdrawal) _buildWithdrawalDestinationInput(),
+                if (_transactionType == model.TransactionType.save && _depositSource == 'mobile_money')
                   _buildMobileProviderInput(),
-                if (_transactionType == TransactionType.withdrawal && _withdrawalDestination == 'mobile_money')
+                if (_transactionType == model.TransactionType.withdrawal && _withdrawalDestination == 'mobile_money')
                   _buildWithdrawalMobileProviderInput(),
-                if (_transactionType == TransactionType.deposit && _depositSource == 'mobile_money' && _mobileProvider.isNotEmpty)
+                if (_transactionType == model.TransactionType.save &&
+                    _depositSource == 'mobile_money' &&
+                    _mobileProvider.isNotEmpty)
                   _buildMobileNumberInput(),
-                if (_transactionType == TransactionType.withdrawal && _withdrawalDestination == 'mobile_money' && _mobileProvider.isNotEmpty)
+                if (_transactionType == model.TransactionType.withdrawal &&
+                    _withdrawalDestination == 'mobile_money' &&
+                    _mobileProvider.isNotEmpty)
                   _buildWithdrawalMobileNumberInput(),
                 const SizedBox(height: 20),
                 _buildDescriptionInput(),
@@ -197,18 +131,18 @@ class _TransactionScreenState extends State<TransactionScreen> {
           children: [
             Expanded(
               child: GestureDetector(
-                onTap: () => setState(() => _transactionType = TransactionType.deposit),
+                onTap: () => setState(() => _transactionType = model.TransactionType.save),
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: _transactionType == TransactionType.deposit ? customGreen : Colors.grey[200],
+                    color: _transactionType == model.TransactionType.save ? customGreen : Colors.grey[200],
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    'Deposit',
+                    'Save',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: _transactionType == TransactionType.deposit ? Colors.white : Colors.black,
+                      color: _transactionType == model.TransactionType.save ? Colors.white : Colors.black,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -218,18 +152,18 @@ class _TransactionScreenState extends State<TransactionScreen> {
             const SizedBox(width: 4),
             Expanded(
               child: GestureDetector(
-                onTap: () => setState(() => _transactionType = TransactionType.withdrawal),
+                onTap: () => setState(() => _transactionType = model.TransactionType.withdrawal),
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: _transactionType == TransactionType.withdrawal ? customGreen : Colors.grey[200],
+                    color: _transactionType == model.TransactionType.withdrawal ? customGreen : Colors.grey[200],
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     'Withdraw',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: _transactionType == TransactionType.withdrawal ? Colors.white : Colors.black,
+                      color: _transactionType == model.TransactionType.withdrawal ? Colors.white : Colors.black,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -239,18 +173,18 @@ class _TransactionScreenState extends State<TransactionScreen> {
             const SizedBox(width: 4),
             Expanded(
               child: GestureDetector(
-                onTap: () => setState(() => _transactionType = TransactionType.transfer),
+                onTap: () => setState(() => _transactionType = model.TransactionType.transfer),
                 child: Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: _transactionType == TransactionType.transfer ? customGreen : Colors.grey[200],
+                    color: _transactionType == model.TransactionType.transfer ? customGreen : Colors.grey[200],
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
                     'Transfer',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: _transactionType == TransactionType.transfer ? Colors.white : Colors.black,
+                      color: _transactionType == model.TransactionType.transfer ? Colors.white : Colors.black,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -306,7 +240,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
     return GestureDetector(
       onTap: () => setState(() {
         _withdrawalDestination = value;
-        _mobileProvider = ''; // Reset provider when changing destination
+        _mobileProvider = '';
       }),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
@@ -353,7 +287,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
     return GestureDetector(
       onTap: () => setState(() {
         _depositSource = value;
-        _mobileProvider = ''; // Reset provider when changing source
+        _mobileProvider = '';
       }),
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
@@ -606,28 +540,14 @@ class _TransactionScreenState extends State<TransactionScreen> {
                   color: _mobileProvider == 'mtn' ? Colors.yellow[700] : Colors.red,
                 ),
               ),
-              validator: (value) {
-                if (_transactionType == TransactionType.deposit && _depositSource == 'mobile_money' && 
-                    _mobileProvider.isNotEmpty && (value == null || value.isEmpty)) {
-                  return 'Please enter a mobile money number';
-                }
-                return null;
-              },
+              validator: (value) => _validateMobileNumber(value, model.TransactionType.save),
             ),
             const SizedBox(height: 8),
             OutlinedButton.icon(
-              onPressed: () {
-                // Here you would implement contact selection
-                // For now, we'll just set a dummy phone number
-                setState(() {
-                  _mobileMoneyNumberController.text = '7XX XXX XXX';
-                });
-              },
+              onPressed: () => _selectContact(_mobileMoneyNumberController),
               icon: const Icon(Icons.contacts),
               label: const Text('Select from contacts'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: customGreen,
-              ),
+              style: OutlinedButton.styleFrom(foregroundColor: customGreen),
             ),
           ],
         ),
@@ -659,28 +579,14 @@ class _TransactionScreenState extends State<TransactionScreen> {
                   color: _mobileProvider == 'mtn' ? Colors.yellow[700] : Colors.red,
                 ),
               ),
-              validator: (value) {
-                if (_transactionType == TransactionType.withdrawal && _withdrawalDestination == 'mobile_money' && 
-                    _mobileProvider.isNotEmpty && (value == null || value.isEmpty)) {
-                  return 'Please enter a mobile money number';
-                }
-                return null;
-              },
+              validator: (value) => _validateMobileNumber(value, model.TransactionType.withdrawal),
             ),
             const SizedBox(height: 8),
             OutlinedButton.icon(
-              onPressed: () {
-                // Here you would implement contact selection
-                // For now, we'll just set a dummy phone number
-                setState(() {
-                  _withdrawalMobileNumberController.text = '7XX XXX XXX';
-                });
-              },
+              onPressed: () => _selectContact(_withdrawalMobileNumberController),
               icon: const Icon(Icons.contacts),
               label: const Text('Select from contacts'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: customGreen,
-              ),
+              style: OutlinedButton.styleFrom(foregroundColor: customGreen),
             ),
           ],
         ),
@@ -708,23 +614,7 @@ class _TransactionScreenState extends State<TransactionScreen> {
                 border: OutlineInputBorder(),
                 hintText: '0',
               ),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter an amount';
-                }
-                try {
-                  double amount = double.parse(value.replaceAll(',', ''));
-                  if (amount <= 0) {
-                    return 'Amount must be greater than 0';
-                  }
-                  if ((_transactionType == TransactionType.withdrawal || _transactionType == TransactionType.transfer) && amount > widget.currentBalance) {
-                    return 'Insufficient balance';
-                  }
-                } catch (e) {
-                  return 'Please enter a valid amount';
-                }
-                return null;
-              },
+              validator: _validateAmount,
               onChanged: (value) {
                 String numericValue = value.replaceAll(',', '');
                 if (numericValue.isNotEmpty) {
@@ -736,22 +626,47 @@ class _TransactionScreenState extends State<TransactionScreen> {
                       selection: TextSelection.collapsed(offset: formatted.length),
                     );
                   });
+                } else {
+                  setState(() => _amount = 0);
                 }
               },
             ),
-            const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                _quickAmountButton(5000),
-                _quickAmountButton(10000),
-                _quickAmountButton(20000),
-                _quickAmountButton(50000),
-              ],
+            const SizedBox(height: 12),
+            SizedBox(
+              height: 36,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                children: [
+                  _quickAmountButton(5000),
+                  const SizedBox(width: 8),
+                  _quickAmountButton(10000),
+                  const SizedBox(width: 8),
+                  _quickAmountButton(20000),
+                  const SizedBox(width: 8),
+                  _quickAmountButton(50000),
+                ],
+              ),
             ),
           ],
         ),
       ),
+    );
+  }
+
+  Widget _quickAmountButton(double amount) {
+    return OutlinedButton(
+      onPressed: () {
+        setState(() {
+          _amount = amount;
+          _amountController.text = currencyFormat.format(amount);
+        });
+      },
+      style: OutlinedButton.styleFrom(
+        foregroundColor: customGreen,
+        side: BorderSide(color: customGreen),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      ),
+      child: Text('UGX ${currencyFormat.format(amount)}'),
     );
   }
 
@@ -777,26 +692,21 @@ class _TransactionScreenState extends State<TransactionScreen> {
                 suffixIcon: Icon(Icons.phone),
               ),
               validator: (value) {
-                if (_transactionType == TransactionType.transfer && (value == null || value.isEmpty)) {
+                if (_transactionType == model.TransactionType.transfer && (value == null || value.isEmpty)) {
                   return 'Please enter a phone number';
+                }
+                if (value != null && !_isValidPhoneNumber(value)) {
+                  return 'Please enter a valid phone number';
                 }
                 return null;
               },
             ),
             const SizedBox(height: 8),
             OutlinedButton.icon(
-              onPressed: () {
-                // Here you would implement contact selection
-                // For now, we'll just set a dummy phone number
-                setState(() {
-                  _phoneController.text = '7XX XXX XXX';
-                });
-              },
+              onPressed: () => _selectContact(_phoneController),
               icon: const Icon(Icons.contacts),
               label: const Text('Select from contacts'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: customGreen,
-              ),
+              style: OutlinedButton.styleFrom(foregroundColor: customGreen),
             ),
           ],
         ),
@@ -851,106 +761,193 @@ class _TransactionScreenState extends State<TransactionScreen> {
     );
   }
 
-  void _processTransaction() {
-    if (_formKey.currentState!.validate()) {
-      // Create a transaction model
-      final TransactionModel transaction = TransactionModel(
-        id: const Uuid().v4(), // Generate a unique ID
-        amount: _amount,
-        date: DateTime.now(),
-        type: _transactionType,
-        description: _descriptionController.text,
-        userId: widget.userId,
-        goalId: widget.goalId,
-        depositSource: _transactionType == TransactionType.deposit ? _depositSource : null,
-        withdrawalDestination: _transactionType == TransactionType.withdrawal ? _withdrawalDestination : null,
-        mobileProvider: (_depositSource == 'mobile_money' || _withdrawalDestination == 'mobile_money') ? _mobileProvider : null,
-        mobileMoneyNumber: _depositSource == 'mobile_money' && _mobileProvider.isNotEmpty ? 
-            _mobileMoneyNumberController.text : null,
-        transferRecipient: _transactionType == TransactionType.transfer ? _phoneController.text : null,
-      );
-
-      String buttonText;
-      switch (_transactionType) {
-        case TransactionType.deposit:
-          buttonText = 'Deposit';
-          break;
-        case TransactionType.withdrawal:
-          buttonText = 'Withdrawal';
-          break;
-        case TransactionType.transfer:
-          buttonText = 'Transfer';
-          break;
-      }
-      
-      // Show the alert in the app bar
-      setState(() {
-        _alertMessage = '$buttonText successful';
-        _showAlert = true;
-      });
-      
-      // Wait briefly to show the success message before navigating back
-      Future.delayed(const Duration(seconds: 1), () {
-        if (mounted) {
-          // Navigate back to home screen with the transaction model
-          Navigator.of(context).pop({
-            'success': true,
-            'transaction': transaction.toJson(),
-          });
-        }
-      });
+  String _getDefaultDescription() {
+    switch (_transactionType) {
+      case model.TransactionType.save:
+        return _depositSource == 'mobile_money'
+            ? '${_mobileProvider.capitalize()} Money Deposit'
+            : 'Bank Deposit';
+      case model.TransactionType.withdrawal:
+        return _withdrawalDestination == 'mobile_money'
+            ? '${_mobileProvider.capitalize()} Money Withdrawal'
+            : 'Withdrawal';
+      case model.TransactionType.transfer:
+        final String recipient = _phoneController.text.isNotEmpty ? 'to ${_phoneController.text}' : '';
+        return 'Transfer $recipient';
     }
   }
 
   Widget _buildSubmitButton() {
-    String buttonText;
-    switch (_transactionType) {
-      case TransactionType.deposit:
-        buttonText = 'Save';
-        break;
-      case TransactionType.withdrawal:
-        buttonText = 'Withdraw';
-        break;
-      case TransactionType.transfer:
-        buttonText = 'Transfer';
-        break;
-    }
-    
     return ElevatedButton(
       onPressed: _processTransaction,
       style: ElevatedButton.styleFrom(
         backgroundColor: customGreen,
         foregroundColor: Colors.white,
         padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
       child: Text(
-        buttonText,
+        _getButtonText(),
         style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
       ),
     );
   }
 
-  Widget _quickAmountButton(double amount) {
-    return ElevatedButton(
-      onPressed: () {
+  String _getButtonText() {
+    switch (_transactionType) {
+      case model.TransactionType.save:
+        return 'Save';
+      case model.TransactionType.withdrawal:
+        return 'Withdrawal';
+      case model.TransactionType.transfer:
+        return 'Transfer';
+    }
+  }
+
+  String? _validateAmount(String? value) {
+    if (value == null || value.isEmpty) {
+      return 'Please enter an amount';
+    }
+    try {
+      double amount = double.parse(value.replaceAll(',', ''));
+      if (amount <= 0) {
+        return 'Amount must be greater than 0';
+      }
+      if ((_transactionType == model.TransactionType.withdrawal || _transactionType == model.TransactionType.transfer) &&
+          amount > widget.currentBalance) {
+        return 'Insufficient balance';
+      }
+      if (amount < 500) {
+        return 'Minimum transaction amount is UGX 500';
+      }
+      if (amount > 5000000) {
+        return 'Maximum transaction amount is UGX 5,000,000';
+      }
+    } catch (e) {
+      return 'Please enter a valid amount';
+    }
+    return null;
+  }
+
+  String? _validateMobileNumber(String? value, model.TransactionType type) {
+    if ((type == model.TransactionType.save && _depositSource == 'mobile_money' ||
+            type == model.TransactionType.withdrawal && _withdrawalDestination == 'mobile_money') &&
+        _mobileProvider.isNotEmpty &&
+        (value == null || value.isEmpty)) {
+      return 'Please enter a mobile money number';
+    }
+    if (value != null && value.isNotEmpty && !_isValidPhoneNumber(value)) {
+      return 'Please enter a valid phone number';
+    }
+    return null;
+  }
+
+  bool _isValidPhoneNumber(String number) {
+    final RegExp phoneRegex = RegExp(r'^\d{9}$');
+    return phoneRegex.hasMatch(number.replaceAll(' ', ''));
+  }
+
+  void _selectContact(TextEditingController controller) {
+    setState(() {
+      controller.text = '7${List.generate(8, (_) => (0 + Random().nextInt(9)).toString()).join()}';
+    });
+  }
+
+  void _processTransaction() {
+    if (_formKey.currentState!.validate()) {
+      if (_transactionType == model.TransactionType.save &&
+          _depositSource == 'mobile_money' &&
+          _mobileProvider.isEmpty) {
+        _showErrorDialog('Please select a mobile money provider');
+        return;
+      }
+      if (_transactionType == model.TransactionType.withdrawal &&
+          _withdrawalDestination == 'mobile_money' &&
+          _mobileProvider.isEmpty) {
+        _showErrorDialog('Please select a mobile money provider');
+        return;
+      }
+
+      final transaction = model.TransactionModel(
+        id: const Uuid().v4(),
+        amount: _amount,
+        date: DateTime.now(),
+        type: _transactionType,
+        description: _descriptionController.text.isEmpty
+            ? _getDefaultDescription()
+            : _descriptionController.text,
+        userId: widget.userId,
+        goalId: widget.goalId,
+        depositSource: _transactionType == model.TransactionType.save ? _depositSource : null,
+        withdrawalDestination: _transactionType == model.TransactionType.withdrawal ? _withdrawalDestination : null,
+        mobileProvider: (_transactionType == model.TransactionType.save && _depositSource == 'mobile_money') ||
+                (_transactionType == model.TransactionType.withdrawal && _withdrawalDestination == 'mobile_money')
+            ? _mobileProvider
+            : null,
+        mobileMoneyNumber: _transactionType == model.TransactionType.save && _depositSource == 'mobile_money'
+            ? _mobileMoneyNumberController.text
+            : (_transactionType == model.TransactionType.withdrawal && _withdrawalDestination == 'mobile_money'
+                ? _withdrawalMobileNumberController.text
+                : null),
+        transferRecipient: _transactionType == model.TransactionType.transfer ? _phoneController.text : null, source: '', category: '',
+      );
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => const Center(child: CircularProgressIndicator()),
+      );
+
+      _executeTransactionWithRetry(transaction).then((_) {
+        // ignore: use_build_context_synchronously
+        Navigator.of(context, rootNavigator: true).pop();
+
         setState(() {
-          _amount = amount;
-          _amountController.text = currencyFormat.format(amount);
+          _showAlert = true;
+          _alertMessage =
+              '${_transactionType.toString().split('.').last.capitalize()} Successful!';
         });
-      },
-      style: ElevatedButton.styleFrom(
-        backgroundColor: Colors.grey[200],
-        foregroundColor: Colors.black87,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
-      child: Text(
-        'UGX ${currencyFormat.format(amount)}',
-        style: const TextStyle(fontSize: 12),
+
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            setState(() => _showAlert = false);
+            Navigator.of(context).pop(transaction);
+          }
+        });
+      }).catchError((error) {
+        // ignore: use_build_context_synchronously
+        Navigator.of(context, rootNavigator: true).pop();
+        _showErrorDialog('Transaction failed: ${error.toString()}');
+      });
+    }
+  }
+
+  Future<void> _executeTransactionWithRetry(model.TransactionModel transaction, {int retries = 2}) async {
+    for (int attempt = 1; attempt <= retries + 1; attempt++) {
+      try {
+        await TransactionService.addTransaction(transaction);
+        return;
+      } catch (e) {
+        if (attempt == retries + 1) {
+          throw Exception('Failed after $retries retries: $e');
+        }
+        await Future.delayed(Duration(milliseconds: 500 * attempt));
+      }
+    }
+  }
+
+  void _showErrorDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('OK'),
+          ),
+        ],
       ),
     );
   }

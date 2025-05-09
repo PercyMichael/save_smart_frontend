@@ -9,7 +9,7 @@ class CustomErrorWidget extends StatelessWidget {
   const CustomErrorWidget({
     Key? key,
     this.message = AppStrings.error,
-    this.onRetry,
+    this.onRetry, required String errorMessage,
   }) : super(key: key);
 
   @override

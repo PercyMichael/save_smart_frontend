@@ -9,6 +9,7 @@ import 'notification_center.dart';
 import 'settings_screen.dart';
 import 'package:savesmart_app/models/transaction_model.dart';
 import 'package:savesmart_app/services/transaction_service.dart';
+import 'package:savesmart_app/services/auth_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -28,8 +29,8 @@ class _HomeScreenState extends State<HomeScreen> {
   double _walletBalance = 0;
   List<TransactionModel> _recentTransactions = [];
   bool _isLoading = true;
-  // ignore: unused_field
-  final String _userId = "user_main"; // This would come from your auth system
+  final String _userId = "user_main";
+  String _userName = "User"; // Default name
 
   @override
   void initState() {
@@ -41,22 +42,160 @@ class _HomeScreenState extends State<HomeScreen> {
     setState(() {
       _isLoading = true;
     });
-    
+
     try {
-      // Initialize sample data if it's the first run
-      await TransactionService.initializeWithSampleData();
+      // Load user profile data
+      await _loadUserProfile();
       
-      // Get balance and transactions from the transaction service
-      _walletBalance = await TransactionService.getWalletBalance();
-      _recentTransactions = await TransactionService.getRecentTransactions(5); // Get last 5 transactions
+      // Load transaction data
+      await TransactionService.initializeWithSampleData();
+      final balance = await TransactionService.getWalletBalance();
+      final transactions = await TransactionService.getRecentTransactions(5);
+
+      setState(() {
+        _walletBalance = balance;
+        _recentTransactions = transactions;
+        _isLoading = false;
+      });
     } catch (e) {
-      // Handle any errors
       debugPrint('Error loading data: $e');
+      _showErrorSnackBar('Failed to load data. Please try again.');
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _loadUserProfile() async {
+    try {
+      // Use class name to call static method
+      final user = await AuthService.getCurrentUser();
+      
+      if (user != null && user.displayName != null && user.displayName!.isNotEmpty) {
+        setState(() {
+          // Extract first name if full name is provided
+          final nameParts = user.displayName!.split(' ');
+          _userName = nameParts.isNotEmpty ? nameParts[0] : user.displayName!;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading user profile: $e');
+      // Keep default name if there's an error
+    }
+  }
+
+  Future<void> _processTransaction(TransactionModel transaction) async {
+    if (!_isValidTransaction(transaction)) {
+      _showErrorSnackBar('Invalid transaction. Please try again.');
+      await _loadData();
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await _executeTransactionWithRetry(transaction);
+
+      setState(() {
+        if (transaction.type == TransactionType.save) {
+          _walletBalance += transaction.amount;
+        } else if (transaction.type == TransactionType.withdrawal ||
+            transaction.type == TransactionType.transfer) {
+          _walletBalance -= transaction.amount;
+        }
+
+        _recentTransactions.insert(0, transaction);
+        if (_recentTransactions.length > 5) {
+          _recentTransactions = _recentTransactions.sublist(0, 5);
+        }
+      });
+
+      _showSuccessSnackBar(transaction);
+    } catch (e) {
+      debugPrint('Error processing transaction: $e');
+      _showErrorSnackBar('Transaction failed: ${e.toString()}');
+      await _loadData();
     } finally {
       setState(() {
         _isLoading = false;
       });
     }
+  }
+
+  bool _isValidTransaction(TransactionModel transaction) {
+    if (transaction.amount <= 0) return false;
+    if (transaction.userId != _userId) return false;
+    if ((transaction.type == TransactionType.withdrawal ||
+            transaction.type == TransactionType.transfer) &&
+        transaction.amount > _walletBalance) {
+      return false;
+    }
+    return true;
+  }
+
+  Future<void> _executeTransactionWithRetry(TransactionModel transaction,
+      {int retries = 2}) async {
+    for (int attempt = 1; attempt <= retries + 1; attempt++) {
+      try {
+        await TransactionService.addTransaction(transaction);
+        return;
+      } catch (e) {
+        if (attempt == retries + 1) {
+          throw Exception('Failed after $retries retries: $e');
+        }
+        await Future.delayed(Duration(milliseconds: 500 * attempt));
+      }
+    }
+  }
+
+  void _showSuccessSnackBar(TransactionModel transaction) {
+    String actionType;
+    String actionVerb;
+    Color snackBarColor;
+
+    switch (transaction.type) {
+      case TransactionType.save:
+        actionType = "Deposit";
+        actionVerb = "saved to";
+        snackBarColor = customGreen;
+        break;
+      case TransactionType.withdrawal:
+        actionType = "Withdrawal";
+        actionVerb = "withdrawn from";
+        snackBarColor = Colors.redAccent;
+        break;
+      case TransactionType.transfer:
+        actionType = "Transfer";
+        actionVerb = "transferred from";
+        snackBarColor = Colors.orangeAccent;
+        break;
+    }
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          '$actionType successful! ${currencyFormat.format(transaction.amount)} $actionVerb your account',
+          style: const TextStyle(color: Colors.white),
+        ),
+        backgroundColor: snackBarColor,
+        duration: const Duration(seconds: 3),
+      ),
+    );
+  }
+
+  void _showErrorSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          message,
+          style: const TextStyle(color: Colors.white),
+        ),
+        backgroundColor: Colors.red,
+        duration: const Duration(seconds: 3),
+      ),
+    );
   }
 
   @override
@@ -66,154 +205,189 @@ class _HomeScreenState extends State<HomeScreen> {
       body: RefreshIndicator(
         onRefresh: _loadData,
         child: SafeArea(
-          child: _isLoading 
-            ? const Center(child: CircularProgressIndicator())
-            : SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                child: Column(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: customGreen,
-                        borderRadius: const BorderRadius.only(
-                          bottomLeft: Radius.circular(30),
-                          bottomRight: Radius.circular(30),
+          child: _isLoading
+              ? const Center(child: CircularProgressIndicator())
+              : SingleChildScrollView(
+                  physics: const AlwaysScrollableScrollPhysics(),
+                  child: Column(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: customGreen,
+                          borderRadius: const BorderRadius.only(
+                            bottomLeft: Radius.circular(30),
+                            bottomRight: Radius.circular(30),
+                          ),
                         ),
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              CircleAvatar(
-                                // ignore: deprecated_member_use
-                                backgroundColor: Colors.white.withOpacity(0.2),
-                                child: IconButton(
-                                  icon: const Icon(Icons.person, color: Colors.white),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                CircleAvatar(
+                                  // ignore: deprecated_member_use
+                                  backgroundColor: Colors.white.withOpacity(0.2),
+                                  child: IconButton(
+                                    icon: const Icon(Icons.person,
+                                        color: Colors.white),
+                                    onPressed: () async {
+                                      // ignore: unused_local_variable
+                                      final result = await Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) => ProfileInformationScreen(
+                                            onProfileUpdate: () {
+                                              // This callback will be triggered when profile is updated
+                                              _loadUserProfile();
+                                            },
+                                          ),
+                                        ),
+                                      );
+                                      // Reload user data when returning from profile screen
+                                      await _loadUserProfile();
+                                    },
+                                  ),
+                                ),
+                                Text(
+                                  'Hello, $_userName',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.notifications,
+                                      color: Colors.white),
                                   onPressed: () {
                                     Navigator.push(
                                       context,
-                                      MaterialPageRoute(builder: (context) => const ProfileInformationScreen()),
+                                      MaterialPageRoute(
+                                          builder: (context) =>
+                                              const NotificationCenter()),
                                     );
                                   },
                                 ),
-                              ),
-                              const Text(
-                                'Hello, Mukasa',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              IconButton(
-                                icon: const Icon(Icons.notifications, color: Colors.white),
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (context) => const NotificationCenter()),
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 24),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Text(
-                                'Wallet Balance',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              IconButton(
-                                icon: Icon(
-                                  _isBalanceVisible ? Icons.visibility : Icons.visibility_off,
-                                  color: Colors.white,
-                                  size: 22,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _isBalanceVisible = !_isBalanceVisible;
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Text(
-                            _isBalanceVisible 
-                                ? currencyFormat.format(_walletBalance)
-                                : '•••••••••',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 36,
-                              fontWeight: FontWeight.bold,
-                              letterSpacing: 0.5,
+                              ],
                             ),
-                          ),
-                          const SizedBox(height: 10),
-                        ],
+                            const SizedBox(height: 24),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Text(
+                                  'Wallet Balance',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                                const SizedBox(width: 5),
+                                IconButton(
+                                  constraints: const BoxConstraints(),
+                                  padding: EdgeInsets.zero,
+                                  icon: Icon(
+                                    _isBalanceVisible
+                                        ? Icons.visibility
+                                        : Icons.visibility_off,
+                                    color: Colors.white,
+                                    size: 22,
+                                  ),
+                                  onPressed: () {
+                                    setState(() {
+                                      _isBalanceVisible = !_isBalanceVisible;
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                Text(
+                                  _isBalanceVisible
+                                      ? currencyFormat.format(_walletBalance)
+                                      : '•••••••••',
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 36,
+                                    fontWeight: FontWeight.bold,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 10),
+                          ],
+                        ),
                       ),
-                    ),
-                    Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Column(
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              _buildStylishActionButton(
-                                context, 
-                                Icons.money_off, 
-                                'Withdraw',
-                                const Color(0xFFF5F5F5),
-                                customGreen, 
-                                () async {
-                                  final result = await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (context) => const WithdrawScreen()),
-                                  );
-                                  if (result == true) {
-                                    _loadData(); // Refresh data if transaction was successful
-                                  }
-                                }
-                              ),
-                              _buildStylishActionButton(
-                                context, 
-                                Icons.add, 
-                                'Save',
-                                customGreen,
-                                Colors.white, 
-                                () async {
-                                  final result = await Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => SavingGoalsScreen(),
-                                    ),
-                                  );
-                                  if (result == true) {
-                                    _loadData(); // Refresh data if transaction was successful
-                                  }
-                                }
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 30),
-                          _buildAnalyticsCard(context),
-                          const SizedBox(height: 20),
-                          _buildTransactionsList(),
-                        ],
+                      Padding(
+                        padding: const EdgeInsets.all(20),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceAround,
+                              children: [
+                                _buildStylishActionButton(
+                                  context,
+                                  Icons.money_off,
+                                  'Withdraw',
+                                  const Color(0xFFF5F5F5),
+                                  customGreen,
+                                  () async {
+                                    final result = await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) => WithdrawScreen(
+                                                currentBalance: _walletBalance,
+                                                userId: _userId,
+                                              )),
+                                    );
+                                    if (result is TransactionModel) {
+                                      await _processTransaction(result);
+                                    } else if (result == true) {
+                                      await _loadData();
+                                    }
+                                  },
+                                ),
+                                _buildStylishActionButton(
+                                  context,
+                                  Icons.add,
+                                  'Save',
+                                  customGreen,
+                                  Colors.white,
+                                  () async {
+                                    final result = await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => SavingGoalsScreen(
+                                          currentBalance: _walletBalance,
+                                          userId: _userId,
+                                        ),
+                                      ),
+                                    );
+                                    if (result is TransactionModel) {
+                                      await _processTransaction(result);
+                                    } else if (result == true) {
+                                      await _loadData();
+                                    }
+                                  },
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 30),
+                            _buildAnalyticsCard(context),
+                            const SizedBox(height: 20),
+                            _buildTransactionsList(),
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
         ),
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -237,7 +411,7 @@ class _HomeScreenState extends State<HomeScreen> {
               context,
               MaterialPageRoute(builder: (context) => const AnalyticsScreen()),
             );
-            _loadData(); // Refresh data when returning from Analytics
+            await _loadData();
           } else if (index == 2) {
             final result = await Navigator.push(
               context,
@@ -248,8 +422,10 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
             );
-            if (result == true) {
-              _loadData(); // Refresh data if transaction was made
+            if (result is TransactionModel) {
+              await _processTransaction(result);
+            } else if (result == true) {
+              await _loadData();
             }
           } else if (index == 3) {
             await Navigator.push(
@@ -281,13 +457,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildStylishActionButton(
-    BuildContext context, 
-    IconData icon, 
-    String label, 
-    Color backgroundColor,
-    Color iconColor,
-    VoidCallback onPressed
-  ) {
+      BuildContext context,
+      IconData icon,
+      String label,
+      Color backgroundColor,
+      Color iconColor,
+      VoidCallback onPressed) {
     return GestureDetector(
       onTap: onPressed,
       child: Container(
@@ -333,7 +508,7 @@ class _HomeScreenState extends State<HomeScreen> {
           context,
           MaterialPageRoute(builder: (context) => const AnalyticsScreen()),
         );
-        _loadData(); // Refresh data when returning from Analytics
+        await _loadData();
       },
       child: Container(
         padding: const EdgeInsets.all(15),
@@ -364,14 +539,15 @@ class _HomeScreenState extends State<HomeScreen> {
             Expanded(
               child: Text(
                 "Let's take a look at your financial overview for ${DateFormat('MMMM').format(DateTime.now())}!",
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w500,
                   color: Colors.black87,
                 ),
               ),
             ),
-            Icon(Icons.chevron_right, color: const Color.fromARGB(255, 183, 206, 146)),
+            const Icon(Icons.chevron_right,
+                color: Color.fromARGB(255, 183, 206, 146)),
           ],
         ),
       ),
@@ -419,8 +595,10 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
                 );
-                if (result == true) {
-                  _loadData();
+                if (result is TransactionModel) {
+                  await _processTransaction(result);
+                } else if (result == true) {
+                  await _loadData();
                 }
               },
               child: Text(
@@ -434,46 +612,42 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
         ),
-        ..._recentTransactions.map((transaction) => 
-          _buildTransactionItem(transaction)
-        // ignore: unnecessary_to_list_in_spreads
-        ).toList(),
+        const SizedBox(height: 10),
+        ..._recentTransactions
+            .map((transaction) => _buildTransactionItem(transaction))
+            // ignore: unnecessary_to_list_in_spreads
+            .toList(),
       ],
     );
   }
 
   Widget _buildTransactionItem(TransactionModel transaction) {
-    // Extract first name from description or use a default
-    String firstNameOrInitial = '';
+    String displayName = '';
     if (transaction.description.isNotEmpty) {
-      // Try to extract a name from the description
       final nameParts = transaction.description.split(' ');
-      if (nameParts.isNotEmpty) {
-        firstNameOrInitial = nameParts[0];
-      }
+      displayName = nameParts.isNotEmpty ? nameParts[0] : 'User';
+    } else if (transaction.transferRecipient != null &&
+        transaction.transferRecipient!.isNotEmpty) {
+      displayName = transaction.transferRecipient!;
+    } else {
+      displayName = 'User';
     }
-    
-    // If we couldn't get a name, use 'User'
-    if (firstNameOrInitial.isEmpty) {
-      firstNameOrInitial = 'User';
-    }
-    
-    // Get transaction type display name
+
     String typeDisplayName = '';
     bool isCredit = false;
-    
+
     switch (transaction.type) {
-      case TransactionType.deposit:
-        typeDisplayName = 'Save';
+      case TransactionType.save:
+        typeDisplayName = 'Deposit';
         isCredit = true;
         break;
       case TransactionType.withdrawal:
-        typeDisplayName = 'Withdraw';
+        typeDisplayName = 'Withdrawal';
         isCredit = false;
         break;
       case TransactionType.transfer:
         typeDisplayName = 'Transfer';
-        isCredit = false; // You might need to determine this based on other factors
+        isCredit = false;
         break;
     }
 
@@ -489,7 +663,7 @@ class _HomeScreenState extends State<HomeScreen> {
           CircleAvatar(
             backgroundColor: Colors.grey[200],
             child: Text(
-              firstNameOrInitial.isNotEmpty ? firstNameOrInitial[0].toUpperCase() : 'U',
+              displayName.isNotEmpty ? displayName[0].toUpperCase() : 'U',
               style: TextStyle(
                 color: customGreen,
                 fontSize: 16,
@@ -503,7 +677,7 @@ class _HomeScreenState extends State<HomeScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  firstNameOrInitial,
+                  displayName,
                   style: const TextStyle(
                     fontWeight: FontWeight.bold,
                     fontSize: 15,

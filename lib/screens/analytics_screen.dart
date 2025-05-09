@@ -80,6 +80,7 @@ class _AnalyticsScreenState extends State<AnalyticsScreen> with SingleTickerProv
       appBar: AppBar(
         title: const Text('Savings Analytics', style: TextStyle(color: Colors.white)),
         backgroundColor: themeColor,
+        iconTheme: const IconThemeData(color: Colors.white),
         bottom: TabBar(
           controller: _tabController,
           indicatorColor: Colors.white,

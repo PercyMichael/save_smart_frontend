@@ -5,7 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
 class WithdrawScreen extends StatefulWidget {
-  const WithdrawScreen({super.key});
+  const WithdrawScreen({super.key, required double currentBalance, required String userId});
 
   @override
   State<WithdrawScreen> createState() => _WithdrawScreenState();

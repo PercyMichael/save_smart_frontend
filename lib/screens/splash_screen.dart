@@ -75,7 +75,16 @@ class _SplashScreenState extends State<SplashScreen> {
                 children: [
                   Image.asset(
                     'assets/images/mpc_logo.png',
-                    height: 300,
+                    height: 200,
+                  ),
+                  Text(
+                    'SAVESMART',
+                    style: TextStyle(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                      letterSpacing: 1.5,
+                    ),
                   ),
                   if (_isLoading)
                     const Padding(
