@@ -1,14 +1,21 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
-import 'save_screen.dart';  // Import the SaveScreen
+import 'package:savesmart_app/models/transaction_model.dart';
+import 'save_screen.dart';
 
 // Define the custom color as a constant for consistency
 const Color customGreen = Color(0xFF8EB55D);
 
 class SavingGoalsScreen extends StatefulWidget {
-  // ignore: use_super_parameters
-  const SavingGoalsScreen({Key? key, required double currentBalance, required String userId}) : super(key: key);
+  final double currentBalance;
+  final String userId;
+
+  const SavingGoalsScreen({
+    super.key,
+    required this.currentBalance,
+    required this.userId,
+  });
 
   @override
   // ignore: library_private_types_in_public_api
@@ -163,7 +170,6 @@ class _SavingsGoalScreenState extends State<SavingGoalsScreen> {
               ),
               backgroundColor: customGreen,
               actions: [
-                // Redesigned Skip button in the app bar
                 TextButton(
                   onPressed: () {
                     // Navigate to SaveScreen with default values
@@ -386,7 +392,7 @@ class _SavingsGoalScreenState extends State<SavingGoalsScreen> {
               ),
               const SizedBox(height: 16),
               
-              // Recommended Amount Section (New)
+              // Recommended Amount Section
               if (_recommendedAmount > 0)
                 Container(
                   padding: const EdgeInsets.all(12),
@@ -528,7 +534,7 @@ class _SavingsGoalScreenState extends State<SavingGoalsScreen> {
                     ],
                   ),
                   
-                  // Redesigned Skip button
+                  // Skip button
                   const SizedBox(height: 16),
                   TextButton(
                     onPressed: () {
@@ -568,32 +574,43 @@ class _SavingsGoalScreenState extends State<SavingGoalsScreen> {
     _navigateToSaveScreen(context);
   }
   
-  // New method to navigate to SaveScreen with the current form data
-  void _navigateToSaveScreen(BuildContext context) {
+  // Method to navigate to SaveScreen with the current form data
+  void _navigateToSaveScreen(BuildContext context) async {
     // Create a map of the goal data to pass to the SaveScreen
     final goalData = {
       'goalName': _goalNameController.text,
-      'targetAmount': double.parse(_targetAmountController.text),
-      'currentBalance': double.parse(_currentBalanceController.text),
+      'targetAmount': double.tryParse(_targetAmountController.text) ?? 0.0,
+      'currentBalance': double.tryParse(_currentBalanceController.text) ?? 0.0,
       'targetDate': _targetDate,
       'category': _selectedCategory,
       'priority': _selectedPriority,
       'frequency': _selectedFrequency,
-      'contributionAmount': double.parse(_contributionAmountController.text),
+      'contributionAmount': double.tryParse(_contributionAmountController.text) ?? 0.0,
       'notes': _notesController.text,
     };
     
-    // Navigate to the SaveScreen and pass the goal data
-    Navigator.push(
+    // Navigate to SaveScreen and wait for result
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => SaveScreen(goalData: goalData),
+        builder: (context) => SaveScreen(
+          goalData: goalData,
+          userId: widget.userId, // Pass userId from constructor
+        ),
       ),
     );
+    
+    debugPrint('SavingGoalsScreen received result: $result');
+    
+    // If a TransactionModel is returned, pass it back to HomeScreen
+    if (result is TransactionModel) {
+      // ignore: use_build_context_synchronously
+      Navigator.pop(context, result);
+    }
   }
   
-  // New method to skip to SaveScreen with default values
-  void _skipToSaveScreen(BuildContext context) {
+  // Method to skip to SaveScreen with default values
+  void _skipToSaveScreen(BuildContext context) async {
     // Create default goal data to pass to SaveScreen
     final defaultGoalData = {
       'goalName': 'Quick Save',
@@ -610,13 +627,24 @@ class _SavingsGoalScreenState extends State<SavingGoalsScreen> {
     // Show feedback that we're skipping
     _showTopAlert('Proceeding to save without creating a goal', customGreen);
     
-    // Navigate to SaveScreen with default data
-    Navigator.push(
+    // Navigate to SaveScreen and wait for result
+    final result = await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => SaveScreen(goalData: defaultGoalData),
+        builder: (context) => SaveScreen(
+          goalData: defaultGoalData,
+          userId: widget.userId, // Pass userId from constructor
+        ),
       ),
     );
+    
+    debugPrint('SavingGoalsScreen received result: $result');
+    
+    // If a TransactionModel is returned, pass it back to HomeScreen
+    if (result is TransactionModel) {
+      // ignore: use_build_context_synchronously
+      Navigator.pop(context, result);
+    }
   }
   
   Widget goalPreviewCard() {
@@ -627,8 +655,8 @@ class _SavingsGoalScreenState extends State<SavingGoalsScreen> {
     if (progress > 1) progress = 1;
     
     String goalName = _goalNameController.text.isEmpty 
-    ? 'Your Savings Goal' 
-    : _goalNameController.text;
+        ? 'Your Savings Goal' 
+        : _goalNameController.text;
     
     // Days remaining calculation
     int daysRemaining = _targetDate.difference(DateTime.now()).inDays;
@@ -730,7 +758,7 @@ class _SavingsGoalScreenState extends State<SavingGoalsScreen> {
                 ],
               ),
               progressColor: progressColor,
-              backgroundColor: Color(0xFFD8E6C3), // Lighter shade of customGreen
+              backgroundColor: const Color(0xFFD8E6C3), // Lighter shade of customGreen
               animation: true,
               animationDuration: 1000,
             ),

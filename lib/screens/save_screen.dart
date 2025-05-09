@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 // ignore: unnecessary_import
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:savesmart_app/models/transaction_model.dart';
 
 class SaveScreen extends StatefulWidget {
   final Map<String, dynamic>? goalData;
-  const SaveScreen({super.key, this.goalData});
+  final String userId; // Added userId parameter
+
+  const SaveScreen({super.key, this.goalData, required this.userId});
 
   @override
   State<SaveScreen> createState() => _SaveScreenState();
@@ -150,22 +153,24 @@ class _SaveScreenState extends State<SaveScreen> {
   }
 
   void _processDeposit(BuildContext context) {
-    // Navigate back to home screen
-    Navigator.of(context).popUntil((route) => route.isFirst);
+    // Create a TransactionModel for the save transaction
+    final amount = double.parse(_amountController.text);
+    final description = _noteController.text.isNotEmpty
+        ? _noteController.text
+        : 'Save to ${_selectedAccount ?? 'account'} via ${_selectedSource ?? 'unknown'}';
+    final transaction = TransactionModel(
+      id: 'txn_${DateTime.now().millisecondsSinceEpoch}',
+      userId: widget.userId, // Use passed userId
+      type: TransactionType.save,
+      amount: amount,
+      date: DateTime.now(),
+      description: description, source: '', category: '',
+    );
 
-    // Show success snackbar after a short delay to ensure navigation completes
-    Future.delayed(const Duration(milliseconds: 300), () {
-      // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Saved successfully!'),
-          backgroundColor: const Color(0xFF8EB55D),
-          behavior: SnackBarBehavior.floating,
-          margin: const EdgeInsets.fromLTRB(16, 50, 16, 0), // Position at top
-          duration: const Duration(seconds: 3), // Show for 3 seconds
-        ),
-      );
-    });
+    debugPrint('Created TransactionModel: id=${transaction.id}, userId=${transaction.userId}, type=${transaction.type}, amount=${transaction.amount}, description=${transaction.description}');
+
+    // Return the TransactionModel to the previous screen
+    Navigator.pop(context, transaction);
   }
 
   @override
@@ -176,7 +181,7 @@ class _SaveScreenState extends State<SaveScreen> {
           'Save Money',
           style: TextStyle(color: Colors.white),
         ),
-        backgroundColor: const Color(0xFF8EB55D), // Updated to your green color
+        backgroundColor: const Color(0xFF8EB55D),
         centerTitle: true,
         iconTheme: const IconThemeData(color: Colors.white),
       ),
@@ -187,10 +192,7 @@ class _SaveScreenState extends State<SaveScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Display goal banner if navigated from goal creation
               if (_hasPrefilledGoal) _buildGoalBanner(),
-
-              // Amount field
               TextFormField(
                 controller: _amountController,
                 decoration: InputDecoration(
@@ -213,8 +215,6 @@ class _SaveScreenState extends State<SaveScreen> {
                 },
               ),
               const SizedBox(height: 16),
-
-              // Quick amount buttons
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: quickAmounts.map((amount) {
@@ -235,8 +235,6 @@ class _SaveScreenState extends State<SaveScreen> {
                 }).toList(),
               ),
               const SizedBox(height: 16),
-
-              // Funding source dropdown
               DropdownButtonFormField<String>(
                 decoration: const InputDecoration(
                   labelText: 'Funding Source',
@@ -264,8 +262,6 @@ class _SaveScreenState extends State<SaveScreen> {
                 },
               ),
               const SizedBox(height: 16),
-
-              // Mobile Money fields if Mobile Money is selected
               if (_selectedSource == 'Mobile Money') ...[
                 DropdownButtonFormField<String>(
                   decoration: const InputDecoration(
@@ -318,8 +314,6 @@ class _SaveScreenState extends State<SaveScreen> {
                 ),
                 const SizedBox(height: 16),
               ],
-
-              // Account dropdown
               DropdownButtonFormField<String>(
                 decoration: const InputDecoration(
                   labelText: 'Save Category',
@@ -348,8 +342,6 @@ class _SaveScreenState extends State<SaveScreen> {
                 },
               ),
               const SizedBox(height: 16),
-
-              // Notes field
               TextFormField(
                 controller: _noteController,
                 decoration: const InputDecoration(
@@ -361,8 +353,6 @@ class _SaveScreenState extends State<SaveScreen> {
                 maxLines: 3,
               ),
               const SizedBox(height: 24),
-
-              // Confirm button
               ElevatedButton(
                 onPressed: _formIsValid
                     ? () {
@@ -379,7 +369,7 @@ class _SaveScreenState extends State<SaveScreen> {
                   padding: const EdgeInsets.all(16),
                   backgroundColor: _formIsValid
                       ? const Color(0xFF8EB55D)
-                      : null, // Updated to your green color
+                      : null,
                   disabledBackgroundColor: Colors.grey.shade300,
                 ),
                 child: Text(
@@ -427,10 +417,10 @@ class _SaveScreenState extends State<SaveScreen> {
             ],
             const SizedBox(height: 8),
             LinearProgressIndicator(
-              value: 0.0, // This would be calculated based on current progress
+              value: 0.0,
               backgroundColor: Colors.grey.shade200,
               valueColor: AlwaysStoppedAnimation<Color>(
-                  const Color(0xFF8EB55D)), // Updated to your green color
+                  const Color(0xFF8EB55D)),
             ),
             const SizedBox(height: 4),
             const Text(
