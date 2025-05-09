@@ -2,16 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:savesmart_app/services/auth_service.dart';
 
 class ProfileInformationScreen extends StatefulWidget {
-  final VoidCallback? onProfileUpdate;
-  
-  // ignore: use_super_parameters
-  const ProfileInformationScreen({
-    Key? key, 
-    this.onProfileUpdate
-  }) : super(key: key);
+  const ProfileInformationScreen({super.key});
 
   @override
-  // ignore: library_private_types_in_public_api
   _ProfileInformationScreenState createState() => _ProfileInformationScreenState();
 }
 
@@ -49,18 +42,18 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
     });
 
     try {
-      // Use class name to call static method
       final user = await AuthService.getCurrentUser();
+      debugPrint('Loaded user data: ${user?.toJson()}');
       
       if (user != null) {
         setState(() {
           _nameController.text = user.displayName ?? "Rehema Malole";
-          _emailController.text = user.email; // Remove ?? since email is required
+          _emailController.text = user.email;
           _phoneController.text = user.phoneNumber ?? "+256 704985597";
           _districtController.text = user.district ?? "Kampala";
         });
       } else {
-        // Default values if no user is found
+        debugPrint('No user found, using defaults');
         setState(() {
           _nameController.text = "Rehema Malole";
           _emailController.text = "rehemamalole@gmail.com";
@@ -70,7 +63,6 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
       }
     } catch (e) {
       debugPrint('Error loading user data: $e');
-      // Show error message or fallback to default values
     } finally {
       setState(() {
         _isLoading = false;
@@ -88,37 +80,63 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
     });
     
     try {
-      // Use class name to call static method
-      await AuthService.updateUserProfile(
+      final updateData = {
+        'displayName': _nameController.text,
+        'email': _emailController.text,
+        'phoneNumber': _phoneController.text,
+        'district': _districtController.text,
+      };
+      debugPrint('Saving user data: $updateData');
+      
+      final result = await AuthService.updateUserProfile(
         displayName: _nameController.text,
         email: _emailController.text,
         phoneNumber: _phoneController.text,
         district: _districtController.text,
       );
+      debugPrint('Update result: $result');
       
-      // Notify the parent widget that profile was updated
-      if (widget.onProfileUpdate != null) {
-        widget.onProfileUpdate!();
-      }
-      
+      // Show success SnackBar styled like WithdrawScreen
       // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated successfully')),
+        SnackBar(
+          content: const Text('Profile updated successfully'),
+          backgroundColor: Colors.green,
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(
+            // ignore: use_build_context_synchronously
+            bottom: MediaQuery.of(context).size.height - 100,
+            right: 20,
+            left: 20,
+          ),
+        ),
       );
+      
+      // Pop back with true to trigger reload on HomeScreen
+      // ignore: use_build_context_synchronously
+      Navigator.pop(context, true);
     } catch (e) {
       debugPrint('Error updating profile: $e');
       // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error updating profile: ${e.toString()}')),
+        SnackBar(
+          content: Text('Error updating profile: ${e.toString()}'),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(
+            // ignore: use_build_context_synchronously
+            bottom: MediaQuery.of(context).size.height - 100,
+            right: 20,
+            left: 20,
+          ),
+        ),
       );
-    } finally {
       setState(() {
         _isLoading = false;
       });
     }
   }
   
-  // Define the theme color using the hex value FF8EB55D
   final Color themeColor = const Color(0xFF8EB55D);
   
   @override
@@ -150,7 +168,6 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
                         icon: const Icon(Icons.camera_alt, color: Colors.grey),
                         label: const Text("Change Profile Picture"),
                         onPressed: () {
-                          // Implement image picker functionality
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('Image picker would open here')),
                           );

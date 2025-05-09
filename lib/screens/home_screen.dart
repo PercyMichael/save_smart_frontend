@@ -68,19 +68,23 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _loadUserProfile() async {
     try {
-      // Use class name to call static method
+      debugPrint('Loading user profile...');
       final user = await AuthService.getCurrentUser();
       
-      if (user != null && user.displayName != null && user.displayName!.isNotEmpty) {
+      debugPrint('User data: ${user?.toJson()}');
+      if (user != null) {
         setState(() {
-          // Extract first name if full name is provided
-          final nameParts = user.displayName!.split(' ');
-          _userName = nameParts.isNotEmpty ? nameParts[0] : user.displayName!;
+          // Use displayName if available, fallback to email or "User"
+          _userName = user.displayName?.isNotEmpty == true
+              ? user.displayName!.split(' ').first
+              : user.email.split('@').first;
+          debugPrint('Updated _userName to: $_userName');
         });
+      } else {
+        debugPrint('No user found');
       }
     } catch (e) {
       debugPrint('Error loading user profile: $e');
-      // Keep default name if there's an error
     }
   }
 
@@ -232,20 +236,17 @@ class _HomeScreenState extends State<HomeScreen> {
                                     icon: const Icon(Icons.person,
                                         color: Colors.white),
                                     onPressed: () async {
-                                      // ignore: unused_local_variable
                                       final result = await Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (context) => ProfileInformationScreen(
-                                            onProfileUpdate: () {
-                                              // This callback will be triggered when profile is updated
-                                              _loadUserProfile();
-                                            },
-                                          ),
+                                          builder: (context) =>
+                                              const ProfileInformationScreen(),
                                         ),
                                       );
-                                      // Reload user data when returning from profile screen
-                                      await _loadUserProfile();
+                                      debugPrint('Profile screen returned: $result');
+                                      if (result == true) {
+                                        await _loadData();
+                                      }
                                     },
                                   ),
                                 ),
