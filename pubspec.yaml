@@ -30,51 +30,62 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  fl_chart: ^0.71.0 
+  flutter_localizations:
+    sdk: flutter
+
+  # UI Components
+  cupertino_icons: ^1.0.8
+  fl_chart: ^1.0.0 
+  percent_indicator: ^4.2.3
+  font_awesome_flutter: ^10.1.0
+
+  # Firebase
+  firebase_core: ^3.13.1
+  firebase_auth: ^5.5.4
+  cloud_firestore: ^5.6.8
+  firebase_storage: ^12.4.6
+  firebase_messaging: ^15.2.6
+  firebase_analytics: ^11.4.6
+  firebase_crashlytics: ^4.3.6
+  
+
+  # Authentication & Security
+  google_sign_in: ^6.2.2 
+  local_auth: ^2.1.8 
+  flutter_secure_storage: ^9.2.4
+
+  # File & Media
   image_picker: ^1.1.2
   pdf: ^3.10.7
   path_provider: ^2.1.2
-  share_plus: ^11.0.0 # Add this for the fl_chart package
-  intl: ^0.20.2  
-  local_auth: ^2.1.8 
-  google_sign_in: ^6.2.2 
-  pull_to_refresh: ^2.0.0 
+  share_plus: ^11.0.0
+
+  # State Management & Data
   provider: ^6.0.5
-  flutter_local_notifications: ^19.0.0 
-  percent_indicator: ^4.2.3 # For biometric authentication
-  url_launcher: ^6.2.1
-  font_awesome_flutter: ^10.1.0
-  #shared_preferences: ^2.2.0
+  shared_preferences: ^2.5.1
+  pull_to_refresh: ^2.0.0
+
+  # Utilities
+  intl: ^0.19.0  
   uuid: ^4.5.1
   dio: ^5.3.2
-  flutter_secure_storage: ^9.2.4
-  
-
- # Latest version  # Add this for the intl package
-
-
-
-
-    
-
-
-  # The following adds the Cupertino Icons font to your application.
-  # Use with the CupertinoIcons class for iOS style icons.
-  cupertino_icons: ^1.0.8
-  shared_preferences: ^2.5.1
+  url_launcher: ^6.2.1
+  flutter_local_notifications: ^19.0.0
+  http: ^1.4.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-
-  
-
-  # The "flutter_lints" package below contains a set of recommended lints to
-  # encourage good coding practices. The lint set provided by the package is
-  # activated in the `analysis_options.yaml` file located at the root of your
-  # package. See that file for information about deactivating specific lint
-  # rules and activating additional ones.
   flutter_lints: ^5.0.0
+  
+  # Code Generation
+  build_runner: ^2.4.8
+  json_serializable: ^6.7.1
+  
+  # Testing
+  test: ^1.23.1
+  mockito: ^5.4.4
+  bloc_test: ^10.0.0
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -85,7 +96,9 @@ flutter:
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
   # the material Icons class.
+  generate: true
   uses-material-design: true
+  
 
   # To add assets to your application, add an assets section, like this:
   assets:
@@ -123,6 +136,3 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
-
-
-

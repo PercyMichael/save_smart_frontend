@@ -1,0 +1,2 @@
+C:/Users/nakaw/Documents/savesmart_app/android/app/.cxx/Debug/3l4z2t6i/armeabi-v7a/CMakeFiles/edit_cache.dir
+C:/Users/nakaw/Documents/savesmart_app/android/app/.cxx/Debug/3l4z2t6i/armeabi-v7a/CMakeFiles/rebuild_cache.dir

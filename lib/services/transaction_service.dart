@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:savesmart_app/models/transaction_model.dart';
+import 'package:savesmart_app/models/transactions_model.dart';
 
 class TransactionService {
   // Keys for SharedPreferences

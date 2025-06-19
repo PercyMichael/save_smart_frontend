@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 // ignore: unnecessary_import
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
-import 'package:savesmart_app/models/transaction_model.dart';
+import 'package:savesmart_app/models/transactions_model.dart';
 
 class SaveScreen extends StatefulWidget {
   final Map<String, dynamic>? goalData;

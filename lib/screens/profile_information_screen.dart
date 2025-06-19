@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:savesmart_app/services/auth_service.dart';
+import 'package:provider/provider.dart';
+import 'package:savesmart_app/provider/auth_provider.dart';
 
 class ProfileInformationScreen extends StatefulWidget {
   const ProfileInformationScreen({super.key});
 
   @override
+  // ignore: library_private_types_in_public_api
   _ProfileInformationScreenState createState() => _ProfileInformationScreenState();
 }
 
@@ -42,7 +44,8 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
     });
 
     try {
-      final user = await AuthService.getCurrentUser();
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      final user = await authProvider.getCurrentUser();
       debugPrint('Loaded user data: ${user?.toJson()}');
       
       if (user != null) {
@@ -80,6 +83,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
     });
     
     try {
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
       final updateData = {
         'displayName': _nameController.text,
         'email': _emailController.text,
@@ -88,7 +92,7 @@ class _ProfileInformationScreenState extends State<ProfileInformationScreen> {
       };
       debugPrint('Saving user data: $updateData');
       
-      final result = await AuthService.updateUserProfile(
+      final result = await authProvider.updateProfile(
         displayName: _nameController.text,
         email: _emailController.text,
         phoneNumber: _phoneController.text,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:percent_indicator/circular_percent_indicator.dart';
-import 'package:savesmart_app/models/transaction_model.dart';
+import 'package:savesmart_app/models/transactions_model.dart';
 import 'save_screen.dart';
 
 // Define the custom color as a constant for consistency

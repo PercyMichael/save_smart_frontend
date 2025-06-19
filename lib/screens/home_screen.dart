@@ -7,7 +7,7 @@ import 'analytics_screen.dart';
 import 'profile_information_screen.dart';
 import 'notification_center.dart';
 import 'settings_screen.dart';
-import 'package:savesmart_app/models/transaction_model.dart';
+import 'package:savesmart_app/models/transactions_model.dart';
 import 'package:savesmart_app/services/transaction_service.dart';
 import 'package:savesmart_app/services/auth_service.dart';
 
@@ -69,15 +69,27 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _loadUserProfile() async {
     try {
       debugPrint('Loading user profile...');
-      final user = await AuthService.getCurrentUser();
       
-      debugPrint('User data: ${user?.toJson()}');
+      // Create an instance of AuthService to call the method
+      final authService = AuthService();
+      final user = await authService.getCurrentUser();
+      
+      debugPrint('User data: $user');
       if (user != null) {
         setState(() {
+          // Handle user data as Map<String, dynamic>
+          final displayName = user['displayName'] as String?;
+          final email = user['email'] as String?;
+          
           // Use displayName if available, fallback to email or "User"
-          _userName = user.displayName?.isNotEmpty == true
-              ? user.displayName!.split(' ').first
-              : user.email.split('@').first;
+          if (displayName != null && displayName.isNotEmpty) {
+            _userName = displayName.split(' ').first;
+          } else if (email != null && email.isNotEmpty) {
+            _userName = email.split('@').first;
+          } else {
+            _userName = "User";
+          }
+          
           debugPrint('Updated _userName to: $_userName');
         });
       } else {
@@ -85,6 +97,10 @@ class _HomeScreenState extends State<HomeScreen> {
       }
     } catch (e) {
       debugPrint('Error loading user profile: $e');
+      // Keep default name on error
+      setState(() {
+        _userName = "User";
+      });
     }
   }
 
@@ -643,10 +659,8 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         const SizedBox(height: 10),
-        ..._recentTransactions
-            .map((transaction) => _buildTransactionItem(transaction))
-            // ignore: unnecessary_to_list_in_spreads
-            .toList(),
+        ...(_recentTransactions
+            .map((transaction) => _buildTransactionItem(transaction))),
       ],
     );
   }

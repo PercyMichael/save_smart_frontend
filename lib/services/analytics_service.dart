@@ -3,7 +3,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 // ignore: unused_import
 import '../models/user_model.dart';
-import '../models/transaction_model.dart';
+import '../models/transactions_model.dart';
 import '../models/goal_model.dart';
 import '../utils/constants.dart';
 
