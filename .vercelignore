@@ -1,0 +1,9 @@
+# Ignore everything
+*
+
+# Except the web build output
+!build/
+!build/web/
+
+# Optional: allow vercel.json
+!vercel.json
