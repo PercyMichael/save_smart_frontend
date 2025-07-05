@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
+import 'package:savesmart_app/firebase_options.dart';
 import 'package:savesmart_app/provider/auth_provider.dart';
 import 'package:savesmart_app/provider/settings_provider.dart';
 import 'package:savesmart_app/screens/debug_connection_test.dart';
@@ -26,17 +27,19 @@ import 'package:savesmart_app/provider/firebase_analytics_provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Initialize Firebase
-  await Firebase.initializeApp();
-  
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+
   // Initialize Firebase providers
   final firebaseAuthProvider = FirebaseAuthProvider();
   await firebaseAuthProvider.initialize();
-  
+
   final settingsProvider = SettingsProvider();
   await settingsProvider.loadSettings();
-  
+
   runApp(
     MultiProvider(
       providers: [
@@ -94,7 +97,8 @@ class MyApp extends StatelessWidget {
                   ),
                 )
               : ThemeData(
-                  colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+                  colorScheme:
+                      ColorScheme.fromSeed(seedColor: Colors.deepPurple),
                   useMaterial3: true,
                   snackBarTheme: const SnackBarThemeData(
                     behavior: SnackBarBehavior.floating,
@@ -105,9 +109,12 @@ class MyApp extends StatelessWidget {
             '/': (context) => const SplashScreen(),
             '/onboarding': (context) => const OnboardingScreen(),
             '/login': (context) => const LoginScreen(),
-            '/home': (context) => const AuthWrapper(child: HomeScreen()), // Fixed: Added const and removed extra parentheses
+            '/home': (context) => const AuthWrapper(
+                child:
+                    HomeScreen()), // Fixed: Added const and removed extra parentheses
             '/resetpassword': (context) => const ResetPasswordScreen(),
-            '/debug': (context) => const DebugConnectionTest(), // Fixed: Added const
+            '/debug': (context) =>
+                const DebugConnectionTest(), // Fixed: Added const
           },
           onUnknownRoute: (settings) {
             return MaterialPageRoute(
@@ -141,11 +148,12 @@ class _AuthWrapperState extends State<AuthWrapper> {
 
   Future<void> _checkAuthStatus() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    final isAuthenticated = authProvider.isLoggedIn; // Use the getter instead of a method
+    final isAuthenticated =
+        authProvider.isLoggedIn; // Use the getter instead of a method
     setState(() {
       _isAuthenticated = isAuthenticated;
     });
-    
+
     if (!isAuthenticated) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         Navigator.of(context).pushReplacementNamed('/login');

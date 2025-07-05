@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 class ApiConstants {
-  static const String baseUrl = 'https://api.savesmartapp.com/v1';
+  // static const String baseUrl = 'https://api.savesmartapp.com/v1';
+  static const String baseUrl = 'https://m.realdeejays.com/api';
 }
 
 class AppColors {

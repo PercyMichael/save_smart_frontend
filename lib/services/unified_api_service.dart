@@ -10,13 +10,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class UnifiedApiService {
   // Define the base URL - replace with your actual API URL
-  static const String baseUrl = 'http://127.0.0.1:8001/api'; // UPDATE THIS
-  
+  static const String baseUrl = 'https://m.realdeejays.com/api'; // UPDATE THIS
+
   // Alternatively, if you have an API config file, use:
   // static String get baseUrl => ApiConfig.baseUrl;
 
   // Authentication Methods
-  static Future<Map<String, dynamic>> login(String input, String password) async {
+  static Future<Map<String, dynamic>> login(
+      String input, String password) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/auth/login'),
@@ -32,12 +33,12 @@ class UnifiedApiService {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        
+
         // Store the token if login is successful
         if (data['token'] != null) {
           await _storeToken(data['token']);
         }
-        
+
         return {
           'success': true,
           'user': data['user'],
@@ -92,7 +93,8 @@ class UnifiedApiService {
       if (response.statusCode == 200) {
         return json.decode(response.body);
       } else {
-        throw Exception('Failed to load dashboard data: ${response.statusCode}');
+        throw Exception(
+            'Failed to load dashboard data: ${response.statusCode}');
       }
     } catch (e) {
       throw Exception('Error fetching dashboard data: $e');
@@ -109,7 +111,8 @@ class UnifiedApiService {
       if (response.statusCode == 200) {
         return json.decode(response.body);
       } else {
-        throw Exception('Failed to load recent transactions: ${response.statusCode}');
+        throw Exception(
+            'Failed to load recent transactions: ${response.statusCode}');
       }
     } catch (e) {
       throw Exception('Error fetching recent transactions: $e');
@@ -127,7 +130,8 @@ class UnifiedApiService {
       if (response.statusCode == 200) {
         return json.decode(response.body);
       } else {
-        throw Exception('Failed to load savings summary: ${response.statusCode}');
+        throw Exception(
+            'Failed to load savings summary: ${response.statusCode}');
       }
     } catch (e) {
       throw Exception('Error fetching savings summary: $e');
@@ -135,7 +139,8 @@ class UnifiedApiService {
   }
 
   // Method to save a transaction
-  static Future<Map<String, dynamic>> saveTransaction(Map<String, dynamic> transactionData) async {
+  static Future<Map<String, dynamic>> saveTransaction(
+      Map<String, dynamic> transactionData) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/transactions/save'),
@@ -154,7 +159,8 @@ class UnifiedApiService {
   }
 
   // Method to create a saving goal
-  static Future<Map<String, dynamic>> createSavingGoal(Map<String, dynamic> goalData) async {
+  static Future<Map<String, dynamic>> createSavingGoal(
+      Map<String, dynamic> goalData) async {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/savings/goals'),
@@ -231,7 +237,7 @@ class UnifiedApiService {
   // Helper method to get authentication headers
   static Future<Map<String, String>> _getAuthHeaders() async {
     final token = await _getStoredToken();
-    
+
     return {
       'Content-Type': 'application/json',
       'Accept': 'application/json',

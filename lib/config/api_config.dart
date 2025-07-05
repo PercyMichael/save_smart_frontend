@@ -4,8 +4,9 @@ import 'package:flutter/foundation.dart';
 class ApiConfig {
   // REPLACE THIS WITH YOUR ACTUAL BACKEND URL
   static const String _productionBaseUrl = 'https://your-backend-api.com/api';
-  static const String _developmentBaseUrl = 'http://127.0.0.1:8001/api'; // Your local server
-  
+  static const String _developmentBaseUrl =
+      'https://m.realdeejays.com/api'; // Your local server
+
   // Automatically choose URL based on debug mode
   static String get baseUrl {
     if (kDebugMode) {
@@ -13,12 +14,12 @@ class ApiConfig {
     }
     return _productionBaseUrl;
   }
-  
+
   // Simplified web handling - no CORS proxy needed since you're disabling web security
   static String get webSafeBaseUrl {
     return baseUrl; // Direct connection since you're using --disable-web-security
   }
-  
+
   // Use this method in your API calls
   static String getFullUrl(String endpoint) {
     // ignore: unnecessary_brace_in_string_interps
@@ -28,23 +29,23 @@ class ApiConfig {
     }
     return url;
   }
-  
+
   // Timeouts
   static const int connectionTimeout = 10000; // 10 seconds
-  static const int receiveTimeout = 15000;    // 15 seconds
-  
+  static const int receiveTimeout = 15000; // 15 seconds
+
   // Headers
   static Map<String, String> get defaultHeaders => {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-    if (kIsWeb) 'X-Requested-With': 'XMLHttpRequest',
-  };
-  
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        if (kIsWeb) 'X-Requested-With': 'XMLHttpRequest',
+      };
+
   static Map<String, String> getAuthHeaders(String token) => {
-    ...defaultHeaders,
-    'Authorization': 'Bearer $token',
-  };
-  
+        ...defaultHeaders,
+        'Authorization': 'Bearer $token',
+      };
+
   // Debug method to test connection
   static void debugConfig() {
     // ignore: avoid_print
@@ -60,7 +61,7 @@ class ApiConfig {
     // ignore: avoid_print
     print('  - Test URL: ${getFullUrl('/user')}');
   }
-  
+
   // API Endpoints
   static const String login = '/login';
   static const String register = '/register';

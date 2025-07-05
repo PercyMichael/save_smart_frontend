@@ -19,8 +19,8 @@ class _DebugConnectionTestState extends State<DebugConnectionTest> {
   bool _isLoading = false;
 
   // Hard-coded URLs for testing - replace with your actual backend URL
-  final String baseUrl = 'http://127.0.0.1:8001/api';
-  
+  final String baseUrl = 'https://m.realdeejays.com/api';
+
   Future<void> testDirectConnection() async {
     setState(() {
       _isLoading = true;
@@ -29,10 +29,10 @@ class _DebugConnectionTestState extends State<DebugConnectionTest> {
 
     // Test 1: Direct test-connection endpoint
     await _testEndpoint('$baseUrl/test-connection', 'Test Connection');
-    
-    // Test 2: Direct user-test endpoint  
+
+    // Test 2: Direct user-test endpoint
     await _testEndpoint('$baseUrl/user-test', 'User Test');
-    
+
     setState(() {
       _isLoading = false;
     });
@@ -56,14 +56,14 @@ class _DebugConnectionTestState extends State<DebugConnectionTest> {
       setState(() {
         _testResults += '✅ Status: ${response.statusCode}\n';
         _testResults += '📄 Response: ${response.body}\n';
-        
+
         if (response.statusCode == 200) {
           _testResults += '🎉 $testName SUCCESS!\n\n';
         } else {
-          _testResults += '❌ $testName failed with status ${response.statusCode}\n\n';
+          _testResults +=
+              '❌ $testName failed with status ${response.statusCode}\n\n';
         }
       });
-
     } catch (e) {
       setState(() {
         _testResults += '❌ $testName ERROR: $e\n';
@@ -87,7 +87,7 @@ class _DebugConnectionTestState extends State<DebugConnectionTest> {
             ElevatedButton(
               onPressed: _isLoading ? null : testDirectConnection,
               // ignore: sort_child_properties_last
-              child: _isLoading 
+              child: _isLoading
                   ? CircularProgressIndicator(color: Colors.white)
                   : Text('Test Backend Connection'),
               style: ElevatedButton.styleFrom(
@@ -113,7 +113,9 @@ class _DebugConnectionTestState extends State<DebugConnectionTest> {
                 ),
                 child: SingleChildScrollView(
                   child: Text(
-                    _testResults.isEmpty ? 'Click "Test Backend Connection" to start...' : _testResults,
+                    _testResults.isEmpty
+                        ? 'Click "Test Backend Connection" to start...'
+                        : _testResults,
                     style: TextStyle(
                       fontFamily: 'monospace',
                       fontSize: 12,
