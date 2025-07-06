@@ -107,7 +107,8 @@ flutter:
    - assets/images/savings.jpeg
    - assets/images/goals.jpg
    - assets/images/interest.jpg
-   
+   - assets/apk/app-release.apk
+
   #   - images/a_dot_burr.jpeg
   #   - images/a_dot_ham.jpeg
 

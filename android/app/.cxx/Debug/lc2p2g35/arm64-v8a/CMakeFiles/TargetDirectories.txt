@@ -1,0 +1,2 @@
+D:/projects/save_smart/savesmart_app/android/app/.cxx/Debug/lc2p2g35/arm64-v8a/CMakeFiles/edit_cache.dir
+D:/projects/save_smart/savesmart_app/android/app/.cxx/Debug/lc2p2g35/arm64-v8a/CMakeFiles/rebuild_cache.dir

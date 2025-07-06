@@ -3,9 +3,10 @@ const MANIFEST = 'flutter-app-manifest';
 const TEMP = 'flutter-temp-cache';
 const CACHE_NAME = 'flutter-app-cache';
 
-const RESOURCES = {"assets/AssetManifest.bin": "3651224e7355b23f5f111aab789ac7c4",
-"assets/AssetManifest.bin.json": "7e353188fc68355ec1c4fbf9bb839d11",
-"assets/AssetManifest.json": "89b75193a87476f3cf4752a1f7bb0209",
+const RESOURCES = {"assets/AssetManifest.bin": "3e56e3f660a095ed5e8198c61a5772a3",
+"assets/AssetManifest.bin.json": "93e06fba28984a9d44ac7d302f4bc2b8",
+"assets/AssetManifest.json": "97c896e8e424818fc8a5359e6cf5cd70",
+"assets/assets/apk/app-release.apk": "bfde96e094c2ff78cb4c2132fa960287",
 "assets/assets/images/goals.jpg": "0f31852b7e1ce17393f7ea1ba6c895d4",
 "assets/assets/images/home_image.jpg": "afaeb288a4bcafed84173963133c199c",
 "assets/assets/images/interest.jpg": "0504bb14bd80c097cfaec0374dbd3a67",
@@ -31,9 +32,10 @@ const RESOURCES = {"assets/AssetManifest.bin": "3651224e7355b23f5f111aab789ac7c4
 "canvaskit/skwasm_st.js": "d1326ceef381ad382ab492ba5d96f04d",
 "canvaskit/skwasm_st.js.symbols": "c7e7aac7cd8b612defd62b43e3050bdd",
 "canvaskit/skwasm_st.wasm": "56c3973560dfcbf28ce47cebe40f3206",
+"download.html": "9571df99ed9ced989db8b5b80855d388",
 "favicon.png": "5dcef449791fa27946b3d35ad8803796",
 "flutter.js": "76f08d47ff9f5715220992f993002504",
-"flutter_bootstrap.js": "5f54de020a1e5bbc0f567498c6118732",
+"flutter_bootstrap.js": "0e4e15dc0581611ecc70bf9a07727895",
 "icons/Icon-192.png": "ac9a721a12bbc803b44f645561ecb1e1",
 "icons/Icon-512.png": "96e752610906ba2a93c65f8abe1645f1",
 "icons/Icon-maskable-192.png": "c457ef57daa1d16f64b27b786ec2ea3c",
